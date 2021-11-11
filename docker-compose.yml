@@ -1,0 +1,6 @@
+services:
+  testnet:
+    build: .
+    volumes:
+      - ./
+
