@@ -1,6 +1,10 @@
 services:
   testnet:
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
     build: .
     volumes:
-      - ./
+      - /AkitaInuASASmartContracts
+    ports:
+      - "9999:9999"
 

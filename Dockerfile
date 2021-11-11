@@ -7,6 +7,8 @@ RUN apt-get update && \
 
 RUN mkdir -p /AkitaInuASASmartContracts
 
+WORKDIR /AkitaInuASASmartContracts
+
 COPY utilities /AkitaInuASASmartContracts
 
 COPY requirements.txt /AkitaInuASASmartContracts
