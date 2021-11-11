@@ -28,4 +28,3 @@ WORKDIR /root/node
 
 COPY assets/setup.sh .
 
-RUN sh $HOME/node/setup.sh
