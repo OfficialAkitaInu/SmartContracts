@@ -6,7 +6,7 @@ RUN apt-get update && \
     python3-pip \
     vim \
     less \
-    tmux \
+    tmux
 
 RUN mkdir -p /AkitaInuASASmartContracts
 
