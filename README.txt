@@ -9,7 +9,9 @@ The docker-compose is a work in progress...
 but the DockerFile works
 This project is written using pyteal, the python library used to write smart contracts for the Algorand blockchain
 
-==============================================================================
+To build run `make build`
+To run container in interactive mode run `make run`
+
 GIT PRACTICES
 
 Developers for this project should follow the practice of a forking workflow, basic link below, you can easily google additional information or ask other devs on the team more info :)

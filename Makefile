@@ -1,8 +1,5 @@
 build: ## Build the container
-	docker build -t smartcontracts .
+	docker-compose build
 
-build-nc: ## Build the container without caching
-	docker build --no-cache -t smartcontracts .
-
-run: ## Run container 
-	docker run smartcontracts
+run: ## Run container in interactive mode
+	docker-compose run algo-testnet
