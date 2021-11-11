@@ -7,6 +7,8 @@ RUN apt-get update && \
 
 RUN mkdir -p /AkitaInuASASmartContracts
 
+COPY utilities /AkitaInuASASmartContracts
+
 COPY requirements.txt /AkitaInuASASmartContracts
 
 RUN pip3 install -r /AkitaInuASASmartContracts/requirements.txt
