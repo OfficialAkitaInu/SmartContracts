@@ -1,10 +1,12 @@
+version: '3.7'
 services:
-  testnet:
-    stdin_open: true # docker run -i
-    tty: true        # docker run -t
-    build: .
-    volumes:
-      - /AkitaInuASASmartContracts
-    ports:
-      - "9999:9999"
-
+    algo-testnet:
+        build:
+            context: .
+        restart: always
+        volumes:
+            - ./data:/root/node/data/:Z
+        tty: true
+        ports:
+            - "8080:8080"
+            - "4001:4001"
