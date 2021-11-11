@@ -9,4 +9,4 @@ RUN mkdir -p /AkitaInuASASmartContracts
 
 COPY requirements.txt /AkitaInuASASmartContracts
 
-RUN pip3 install pyteal
+RUN pip3 install -r /AkitaInuASASmartContracts/requirements.txt
