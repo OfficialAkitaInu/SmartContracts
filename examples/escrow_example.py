@@ -139,7 +139,7 @@ def donation_escrow(benefactor):
 
 """Basic Donation Asset Escrow"""
 
-def donation_asset_escrow(benefactor):
+def donation_asset_escrow(benefactor, algod_client):
     Fee = Int(1000)
 
     #Only the benefactor account can withdraw from this escrow
@@ -167,7 +167,7 @@ def main() :
     print("Compiling Donation Smart Signature......")
 
     #stateless_program_teal = donation_escrow(receiver_public_key)
-    stateless_program_teal = donation_asset_escrow(receiver_public_key, )
+    stateless_program_teal = donation_asset_escrow(receiver_public_key, algod_client)
     escrow_result, escrow_address = compile_smart_signature(algod_client, stateless_program_teal)
 
     print("Program:", escrow_result)
@@ -178,7 +178,7 @@ def main() :
 
     # Activate escrow contract by sending 2 algo and 1000 microalgo for transaction fee from creator
     amt = 1000000
-    payment_transaction(sender_mnemonic, amt, escrow_address, algod_client)
+    payment_transaction(sender_mnemonic, amt, escrow_address)
 
     send_asset_optin_transaction(escrow_result, escrow_address, int(44314784), algod_client)
     lsig_send_optin_txn(escrow_result, escrow_address, int(44314784), algod_client)
