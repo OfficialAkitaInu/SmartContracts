@@ -83,6 +83,17 @@ def wait_for_txn_confirmation(client, transaction_id, timeout):
     raise Exception(
         'pending tx not found in timeout rounds, timeout value = : {}'.format(timeout))
 
+def sign_txn(unsigned_txn, private_key):
+    """
+        signs the provided unsigned transaction
+            Args:
+                unsigned_txn (???): transaction to be signed
+                private_key (str): private key of sender
+            Returns:
+                ???: signed transaction
+    """
+    signed_tx = unsigned_txn.sign(private_key)
+    return signed_tx
 
 def create_app_signed_txn(private_key,
                           public_key,
@@ -92,9 +103,21 @@ def create_app_signed_txn(private_key,
                           clear_program,
                           global_schema,
                           local_schema):
-
-    # create unsigned transaction
-    txn = transaction.ApplicationCreateTxn(public_key,
+    """
+        Creates an signed "create app" transaction to an application
+            Args:
+                private_key (str): private key of sender
+                public_key (str): public key of sender
+                params (???): parameters obtained from algod
+                on_complete (???):
+                approval_program (???): compiled approval program
+                clear_program (???): compiled clear program
+                global_schema (???): global schema variables
+                local_schema (???): local schema variables
+            Returns:
+                tuple: Tuple containing the signed transaction and signed transaction id
+    """
+    unsigned_txn = transaction.ApplicationCreateTxn(public_key,
                                            params,
                                            on_complete,
                                            approval_program,
@@ -102,10 +125,8 @@ def create_app_signed_txn(private_key,
                                            global_schema,
                                            local_schema)
 
-    # sign transaction
-    signed_tx = txn.sign(private_key)
-    txID = signed_tx.transaction.get_txid()
-    return signed_tx, txID
+    signed_txn = sign_txn(unsigned_txn, private_key)
+    return signed_txn, signed_txn.transaction.get_txid()
 
 
 def create_app_unsigned_txn(
@@ -116,7 +137,19 @@ def create_app_unsigned_txn(
                        clear_program,
                        global_schema,
                        local_schema):
-
+    """
+        Creates an unsigned "create app" transaction to an application
+            Args:
+                public_key (str): public key of sender
+                params (???): parameters obtained from algod
+                on_complete (???):
+                approval_program (???): compiled approval program
+                clear_program (???): compiled clear program
+                global_schema (???): global schema variables
+                local_schema (???): local schema variables
+            Returns:
+                ApplicationOptInTxn: unsigned transaction
+    """
     # create unsigned transaction
     txn = transaction.ApplicationCreateTxn(public_key,
                                            params,
@@ -127,3 +160,41 @@ def create_app_unsigned_txn(
                                            local_schema)
     return txn
 
+
+def opt_in_app_signed_txn(private_key,
+                          public_key,
+                          params,
+                          app_id):
+    """
+    Creates and signs an "opt in" transaction to an application
+        Args:
+            private_key (str): private key of sender
+            public_key (str): public key of sender
+            params (???): parameters obtained from algod
+            app_id (int): id of application
+        Returns:
+            tuple: Tuple containing the signed transaction and signed transaction id
+    """
+    txn = transaction.ApplicationOptInTxn(public_key,
+                                          params,
+                                          app_id)
+    signed_txn = sign_txn(txn, private_key)
+    return signed_txn, signed_txn.transaction.get_txid()
+
+
+def opt_in_app_signed_txn(public_key,
+                          params,
+                          app_id):
+    """
+    Creates an unsigned "opt in" transaction to an application
+        Args:
+            public_key (str): public key of sender
+            params (???): parameters obtained from algod
+            app_id (int): id of application
+        Returns:
+            ApplicationOptInTxn: unsigned transaction
+    """
+    unsigned_txn = transaction.ApplicationOptInTxn(public_key,
+                                                   params,
+                                                   app_id)
+    return unsigned_txn
