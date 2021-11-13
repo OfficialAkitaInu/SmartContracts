@@ -178,7 +178,7 @@ def main() :
 
     # Activate escrow contract by sending 2 algo and 1000 microalgo for transaction fee from creator
     amt = 1000000
-    payment_transaction(sender_mnemonic, amt, escrow_address)
+    payment_transaction(sender_mnemonic, amt, escrow_address, algod_client)
 
     send_asset_optin_transaction(escrow_result, escrow_address, int(44314784), algod_client)
     lsig_send_optin_txn(escrow_result, escrow_address, int(44314784), algod_client)
