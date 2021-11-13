@@ -12,6 +12,12 @@ This project is written using pyteal, the python library used to write smart con
 To build run `make build`
 To run container in interactive mode run `make run`
 
+==============================================================================
+SETUP
+Be sure to make a copy of DeveloperConfigExample.json that is renamed to DeveloperConfig.json and fill in the relevant
+fields.
+
+==============================================================================
 GIT PRACTICES
 
 Developers for this project should follow the practice of a forking workflow, basic link below, you can easily google additional information or ask other devs on the team more info :)

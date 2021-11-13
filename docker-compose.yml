@@ -5,7 +5,7 @@ services:
             context: .
         restart: always
         volumes:
-            - ./data:/root/node/data/:Z
+            - ./data:/root/node/data
         tty: true
         ports:
             - "8080:8080"

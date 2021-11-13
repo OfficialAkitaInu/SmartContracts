@@ -12,9 +12,9 @@ from algosdk.v2client import algod
 from pyteal import *
 
 # user declared account mnemonics
-creator_mnemonic = "finger rigid hat room course salmon say detect avocado assault awake sea public curious exit valve donkey tired escape dash drink diagram section absent cruise"
+creator_mnemonic = "purpose day enable vacant donkey wide pave ticket beauty wide perfect issue fury random nurse avocado marine margin axis mutual pet giraffe maple absent market"
 # user declared algod connection parameters. Node must have EnableDeveloperAPI set to true in its config
-algod_address = "http://localhost:4001"
+algod_address = 'http://localhost:4001'
 algod_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
 # helper function to compile program source
@@ -138,16 +138,16 @@ def approval_program():
         [Txn.on_completion() == OnComplete.NoOp, handle_noop]
     )
     # Mode.Application specifies that this is a smart contract
-    return compileTeal(program, Mode.Application, version=3)
+    return compileTeal(program, Mode.Application, version=5)
 
 def clear_state_program():
     program = Return(Int(1))
     # Mode.Application specifies that this is a smart contract
-    return compileTeal(program, Mode.Application, version=3)
+    return compileTeal(program, Mode.Application, version=5)
 
 
 # create new application
-def create_app(client, private_key, approval_program, clear_program, global_schema, local_schema):
+def deployApp(client, private_key, approval_program, clear_program, global_schema, local_schema):
     # define sender as creator
     sender = account.address_from_private_key(private_key)
 
@@ -175,7 +175,7 @@ def create_app(client, private_key, approval_program, clear_program, global_sche
     # display results
     transaction_response = client.pending_transaction_info(tx_id)
     app_id = transaction_response['application-index']
-    print("Created new app-id:", app_id)
+    print("Deployed new app-id:", app_id)
 
     return app_id
 
@@ -239,8 +239,10 @@ def main() :
     print("Deploying Counter application......")
 
     # create new application
-    app_id = create_app(algod_client, creator_private_key, approval_program_compiled, clear_state_program_compiled, global_schema, local_schema)
+    app_id = deployApp(algod_client, creator_private_key, approval_program_compiled, clear_state_program_compiled, global_schema, local_schema)
+    print("app_id = " + str(app_id))
 
+    #app_id = 123456
     # read global state of application
     print("Global state:", read_global_state(algod_client, account.address_from_private_key(creator_private_key), app_id))
 
@@ -251,5 +253,13 @@ def main() :
 
     # read global state of application
     print("Global state:", read_global_state(algod_client, account.address_from_private_key(creator_private_key), app_id))
+
+    print("Calling Counter application 2......")
+    app_args = ["Add"]
+    call_app(algod_client, creator_private_key, app_id, app_args)
+
+    # read global state of application
+    print("Global state:",
+          read_global_state(algod_client, account.address_from_private_key(creator_private_key), app_id))
 
 main()
