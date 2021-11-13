@@ -182,7 +182,7 @@ def opt_in_app_signed_txn(private_key,
     return signed_txn, signed_txn.transaction.get_txid()
 
 
-def opt_in_app_signed_txn(public_key,
+def opt_in_app_unsigned_txn(public_key,
                           params,
                           app_id):
     """
