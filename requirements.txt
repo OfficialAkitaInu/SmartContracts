@@ -1,1 +1,3 @@
+joblib
 pyteal
+py-algorand-sdk

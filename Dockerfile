@@ -30,3 +30,4 @@ WORKDIR /root/node
 
 COPY assets/setup.sh .
 
+RUN chmod 755 setup.sh
