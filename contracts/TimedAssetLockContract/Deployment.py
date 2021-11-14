@@ -31,7 +31,9 @@ def deploy_app(client, private_key, approval_program, clear_program, global_sche
     # display results
     transaction_response = client.pending_transaction_info(tx_id)
     app_id = transaction_response['application-index']
-    print("Deployed new app-id:", app_id)
+    print("Deployed new app-id: " + str(app_id))
+    print("Deployed application address: " +
+          encoding.encode_address(encoding.checksum(b'appID' + app_id.to_bytes(8, 'big'))))
 
     return app_id
 
@@ -53,9 +55,8 @@ def deploy():
     global_schema = load_schema(file_path='globalSchema')
     local_schema = load_schema(file_path='localSchema')
 
-    developer_config = load_developer_config()
     asset_id = 44887300   #ASSET ID
-    end_time = 1636909200 #UTC TIMESTAMP
+    end_time = 	1636903860 #UTC TIMESTAMP
     address = developer_config["creatorAddress"]
     app_args = [
                 asset_id.to_bytes(8, "big"),

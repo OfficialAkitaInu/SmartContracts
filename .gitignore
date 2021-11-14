@@ -2,4 +2,5 @@ data/*
 build/*
 venv/*
 /contracts/TimedAssetLockContract/__pycache__/*
+/__pycache__/*
 /DeveloperConfig.json
