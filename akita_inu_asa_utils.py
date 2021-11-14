@@ -51,7 +51,7 @@ def write_schema(file_path, num_ints, num_bytes):
 
 
 def load_schema(file_path):
-    load('build/' + file_path)
+    return load('build/' + file_path)
 
 
 def wait_for_txn_confirmation(client, transaction_id, timeout):
@@ -102,7 +102,8 @@ def create_app_signed_txn(private_key,
                           approval_program,
                           clear_program,
                           global_schema,
-                          local_schema):
+                          local_schema,
+                          app_args):
     """
         Creates an signed "create app" transaction to an application
             Args:
@@ -118,12 +119,13 @@ def create_app_signed_txn(private_key,
                 tuple: Tuple containing the signed transaction and signed transaction id
     """
     unsigned_txn = transaction.ApplicationCreateTxn(public_key,
-                                           params,
-                                           on_complete,
-                                           approval_program,
-                                           clear_program,
-                                           global_schema,
-                                           local_schema)
+                                                    params,
+                                                    on_complete,
+                                                    approval_program,
+                                                    clear_program,
+                                                    global_schema,
+                                                    local_schema,
+                                                    app_args)
 
     signed_txn = sign_txn(unsigned_txn, private_key)
     return signed_txn, signed_txn.transaction.get_txid()
@@ -136,7 +138,8 @@ def create_app_unsigned_txn(
                        approval_program,
                        clear_program,
                        global_schema,
-                       local_schema):
+                       local_schema,
+                       app_args):
     """
         Creates an unsigned "create app" transaction to an application
             Args:
@@ -157,7 +160,8 @@ def create_app_unsigned_txn(
                                            approval_program,
                                            clear_program,
                                            global_schema,
-                                           local_schema)
+                                           local_schema,
+                                           app_args)
     return txn
 
 

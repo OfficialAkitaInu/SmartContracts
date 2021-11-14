@@ -1,9 +1,9 @@
 from algosdk.future import transaction
-from algosdk import account, mnemonic, logic
+from algosdk import account, mnemonic, logic, encoding
 from akita_inu_asa_utils import *
+from pyteal import *
 
-
-def deploy_app(client, private_key, approval_program, clear_program, global_schema, local_schema):
+def deploy_app(client, private_key, approval_program, clear_program, global_schema, local_schema, app_args):
     # define sender as creator
     public_key = account.address_from_private_key(private_key)
 
@@ -14,13 +14,14 @@ def deploy_app(client, private_key, approval_program, clear_program, global_sche
     params = client.suggested_params()
 
     signed_txn, tx_id = create_app_signed_txn(private_key,
-                                                   public_key,
-                                                   params,
-                                                   on_complete,
-                                                   approval_program,
-                                                   clear_program,
-                                                   global_schema,
-                                                   local_schema)
+                                              public_key,
+                                              params,
+                                              on_complete,
+                                              approval_program,
+                                              clear_program,
+                                              global_schema,
+                                              local_schema,
+                                              app_args)
 
     # send transaction
     client.send_transactions([signed_txn])
@@ -52,5 +53,16 @@ def deploy():
     global_schema = load_schema(file_path='globalSchema')
     local_schema = load_schema(file_path='localSchema')
 
-    deploy_app(algod_client, private_key, approval_program, clear_program, global_schema, local_schema)
+    developer_config = load_developer_config()
+    asset_id = 44887300   #ASSET ID
+    end_time = 1636909200 #UTC TIMESTAMP
+    address = developer_config["creatorAddress"]
+    app_args = [
+                asset_id.to_bytes(8, "big"),
+                encoding.decode_address(address),
+                end_time.to_bytes(8, "big")
+               ]
+
+
+    deploy_app(algod_client, private_key, approval_program, clear_program, global_schema, local_schema, app_args)
 
