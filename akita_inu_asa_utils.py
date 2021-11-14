@@ -202,3 +202,20 @@ def opt_in_app_unsigned_txn(public_key,
                                                    params,
                                                    app_id)
     return unsigned_txn
+
+def create_asa_signed_txn(public_key, private_key, params, total=1e6, default_frozen=False, decimals=0):
+    asa_id = 0
+    txn = transaction.AssetConfigTxn(
+        sender=public_key,
+        sp=params,
+        total=total,
+        default_frozen=default_frozen,
+        manager=public_key,
+        reserve=public_key,
+        freeze=public_key,
+        clawback=public_key,
+        url="https://path/to/my/asset/details",
+        decimals=0)
+
+    signed_txn = sign_txn(txn, private_key)
+    return signed_txn

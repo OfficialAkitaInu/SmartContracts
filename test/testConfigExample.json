@@ -1,0 +1,9 @@
+{
+  "algodAddress": "http://localhost:4001",
+  "algodToken": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "asset_id": 3,
+  "wallet1_publicKey": "DO NOT STORE YOUR REAL PUBLIC KEY HERE",
+  "wallet1_Mnemonic": "DO NOT STORE YOUR REAL PRIVATE KEY HERE",
+  "wallet2_publicKey": "DO NOT STORE YOUR REAL PUBLIC KEY HERE",
+  "wallet2_Mnemonic": "DO NOT STORE YOUR REAL PRIVATE KEY HERE"
+}

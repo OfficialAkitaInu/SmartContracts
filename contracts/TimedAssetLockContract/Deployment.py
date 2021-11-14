@@ -3,6 +3,7 @@ from algosdk import account, mnemonic, logic, encoding
 from akita_inu_asa_utils import *
 from pyteal import *
 
+
 def deploy_app(client, private_key, approval_program, clear_program, global_schema, local_schema, app_args):
     # define sender as creator
     public_key = account.address_from_private_key(private_key)
@@ -38,16 +39,13 @@ def deploy_app(client, private_key, approval_program, clear_program, global_sche
     return app_id
 
 
-def deploy(asset_id, end_time):
-    developer_config = load_developer_config()
-
-    algod_address = developer_config['algodAddress']
-    algod_token = developer_config['algodToken']
-    creator_mnemonic = developer_config['creatorMnemonic']
+# asset_id is the ASAs ID
+# end time is the time to allow withdrawel from escrow
+def deploy(algod_address, algod_token, creator_public_key, creator_mnemonic, asset_id, end_time):
 
     private_key = mnemonic.to_private_key(creator_mnemonic)
     algod_client = get_algod_client(algod_token,
-                                          algod_address)
+                                    algod_address)
 
     approval_program = load_compiled(file_path='assetTimedVault_Approval.compiled')
     clear_program = load_compiled(file_path='assetTimedVault_Clear.compiled')
@@ -55,15 +53,11 @@ def deploy(asset_id, end_time):
     global_schema = load_schema(file_path='globalSchema')
     local_schema = load_schema(file_path='localSchema')
 
-    asset_id = 44887300   #ASSET ID
-    end_time = 1636903860 #UTC TIMESTAMP
-    address = developer_config["creatorAddress"]
     app_args = [
-                asset_id.to_bytes(8, "big"),
-                encoding.decode_address(address),
-                end_time.to_bytes(8, "big")
-               ]
+        asset_id.to_bytes(8, "big"),
+        encoding.decode_address(creator_public_key),
+        end_time.to_bytes(8, "big")
+    ]
 
-
-    deploy_app(algod_client, private_key, approval_program, clear_program, global_schema, local_schema, app_args)
-
+    app_id = deploy_app(algod_client, private_key, approval_program, clear_program, global_schema, local_schema, app_args)
+    return app_id
