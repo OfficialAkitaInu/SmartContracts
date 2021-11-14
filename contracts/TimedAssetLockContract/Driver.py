@@ -12,8 +12,8 @@ def main():
 
     Program.compile(algod_client)
     print("Program Compiled")
-    Deployment.deploy()
-    print("Program Deployed")
+    #Deployment.deploy()
+    #print("Program Deployed")
 
 
 main()

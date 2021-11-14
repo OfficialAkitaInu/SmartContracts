@@ -38,7 +38,7 @@ def deploy_app(client, private_key, approval_program, clear_program, global_sche
     return app_id
 
 
-def deploy():
+def deploy(asset_id, end_time):
     developer_config = load_developer_config()
 
     algod_address = developer_config['algodAddress']
@@ -56,7 +56,7 @@ def deploy():
     local_schema = load_schema(file_path='localSchema')
 
     asset_id = 44887300   #ASSET ID
-    end_time = 	1636903860 #UTC TIMESTAMP
+    end_time = 1636903860 #UTC TIMESTAMP
     address = developer_config["creatorAddress"]
     app_args = [
                 asset_id.to_bytes(8, "big"),
