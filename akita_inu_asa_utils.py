@@ -1,15 +1,17 @@
 import base64
 from algosdk.v2client import algod
 from algosdk.future import transaction
+from algosdk import encoding
 from joblib import dump, load
 import json
 import os
 
+def getApplicationAddress(app_id):
+    return encoding.encode_address(encoding.checksum(b'appID' + app_id.to_bytes(8, 'big')))
 
 def check_build_dir():
     if not os.path.exists('build'):
         os.mkdir('build')
-
 
 def compile_program(client, source_code, file_path=None):
     compile_response = client.compile(source_code)
@@ -203,8 +205,30 @@ def opt_in_app_unsigned_txn(public_key,
                                                    app_id)
     return unsigned_txn
 
+def noop_app_signed_txn(private_key,
+                          public_key,
+                          params,
+                          app_id,
+                          asset_ids=None):
+    """
+    Creates and signs an "noOp" transaction to an application
+        Args:
+            private_key (str): private key of sender
+            public_key (str): public key of sender
+            params (???): parameters obtained from algod
+            app_id (int): id of application
+            asset_id (int): id of asset if any
+        Returns:
+            tuple: Tuple containing the signed transaction and signed transaction id
+    """
+    txn = transaction.ApplicationNoOpTxn(public_key,
+                                         params,
+                                         app_id,
+                                         foreign_assets=asset_ids)
+    signed_txn = sign_txn(txn, private_key)
+    return signed_txn, signed_txn.transaction.get_txid()
+
 def create_asa_signed_txn(public_key, private_key, params, total=1e6, default_frozen=False, decimals=0):
-    asa_id = 0
     txn = transaction.AssetConfigTxn(
         sender=public_key,
         sp=params,
@@ -215,7 +239,20 @@ def create_asa_signed_txn(public_key, private_key, params, total=1e6, default_fr
         freeze=public_key,
         clawback=public_key,
         url="https://path/to/my/asset/details",
-        decimals=0)
+        decimals=decimals)
 
     signed_txn = sign_txn(txn, private_key)
     return signed_txn
+
+def transfer_signed_txn(sender_private_key,
+                        sender_public_key,
+                        receiver_public_key,
+                        amount,
+                        params):
+    txn = transaction.PaymentTxn(sender_public_key,
+                                 params,
+                                 receiver_public_key,
+                                 amount)
+    signed_txn = sign_txn(txn, sender_private_key)
+    return signed_txn, signed_txn.transaction.get_txid()
+
