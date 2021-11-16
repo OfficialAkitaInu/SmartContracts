@@ -3,3 +3,5 @@ build/*
 venv/*
 /contracts/TimedAssetLockContract/__pycache__/*
 /DeveloperConfig.json
+.idea/*
+__pycache__
