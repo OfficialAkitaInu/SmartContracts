@@ -1,10 +1,18 @@
 from Program import compile
 from Deployment import deploy
 from akita_inu_asa_utils import *
+from helpers import add_standalone_account, fund_account
 
 
 def main():
-    developer_config = load_developer_config()
+    creator_mnemonic, creator_public_key = add_standalone_account()
+    fund_account(creator_publicKey)
+
+    developer_config = {
+      "algodAddress": "http://localhost:4001",
+      "algodToken": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "creatorMnemonic": creator_mnemonic 
+    }
 
     algod_address = developer_config['algodAddress']
     algod_token = developer_config['algodToken']

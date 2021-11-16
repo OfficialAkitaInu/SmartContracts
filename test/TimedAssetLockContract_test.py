@@ -1,10 +1,46 @@
 import pytest
 from algosdk.v2client import algod
 
+from algosdk import account, mnemonic, constants
+from algosdk.encoding import encode_address, is_valid_address
+from algosdk.error import AlgodHTTPError, TemplateInputError
+
+from helpers import (
+    account_balance,
+    add_standalone_account,
+    fund_account,
+    call_sandbox_command,
+    transaction_info,
+)
+
+
+def setup_module(module):
+    """Ensure Algorand Sandbox is up prior to running tests from this module."""
+    call_sandbox_command("up")
+    # call_sandbox_command("up", "dev")
+
+
 @pytest.fixture(scope='class')
 def test_config():
-    from test.testingUtils import load_test_config
-    return load_test_config()
+
+    #creator wallet
+    wallet1_Mnemonic, wallet1_publicKey = add_standalone_account()
+
+    #escrow wallet
+    wallet2_Mnemonic, wallet2_publicKey = add_standalone_account()
+
+    fund_account(wallet1_publicKey)
+    #fund_account(wallet2_publicKey)
+     
+    return {
+      "algodAddress": "http://localhost:4001",
+      "algodToken": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "asset_id": 3,
+      "wallet1_publicKey": wallet1_publicKey,
+      "wallet1_Mnemonic": wallet1_Mnemonic,
+      #"wallet2_publicKey": wallet2_publicKey,
+      #"wallet2_Mnemonic": wallet2_Mnemonic
+    }
 
 @pytest.fixture
 def client(test_config):
@@ -59,7 +95,8 @@ class TestTimedAssetLockContract:
 
         public_key = test_config['wallet1_publicKey']
         creator_mnemonic = test_config['wallet1_Mnemonic']
-        asset_id = test_config['asset_id']
+        #asset_id = test_config['asset_id']
+        asset_id = client.account_info(public_key)['assets'][-1]['asset-id']
         private_key = mnemonic.to_private_key(creator_mnemonic)
         params = client.suggested_params()
 
