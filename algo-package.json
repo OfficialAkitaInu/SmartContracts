@@ -1,0 +1,14 @@
+{
+  "name" : "akitacontracts",
+  "version" : "0.1",
+  "stateful_contracts" : [ {
+    "name" : "TimedAssetLockContract",
+    "approval_program" : "build/assetTimedVault_Approval.teal",
+    "clear_state_program" : "build/assetTimedVault_Clear.teal",
+    "global-byteslices" : 0,
+    "global-ints" : 0,
+    "local-byteslices" : 0,
+    "local-ints" : 0,
+    "extra-pages" : 0
+  } ]
+}
