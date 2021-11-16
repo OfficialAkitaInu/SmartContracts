@@ -1,10 +1,16 @@
-import base64
-from algosdk.v2client import algod
+from algosdk.v2client import algod, indexer
 from algosdk.future import transaction
-from algosdk import encoding
+from algosdk import encoding, account, mnemonic
+from algosdk.error import IndexerHTTPError
+
 from joblib import dump, load
+import time
 import json
 import os
+from pathlib import Path
+import base64
+import subprocess
+import pty
 
 def getApplicationAddress(app_id):
     return encoding.encode_address(encoding.checksum(b'appID' + app_id.to_bytes(8, 'big')))
@@ -12,6 +18,10 @@ def getApplicationAddress(app_id):
 def check_build_dir():
     if not os.path.exists('build'):
         os.mkdir('build')
+
+def add_new_account():
+    private_key, address = account.generate_account()
+    return mnemonic.from_private_key(private_key), address
 
 def compile_program(client, source_code, file_path=None):
     compile_response = client.compile(source_code)
@@ -21,13 +31,17 @@ def compile_program(client, source_code, file_path=None):
         check_build_dir()
         dump(base64.b64decode(compile_response['result']), 'build/' + file_path)
 
+def _indexer_client():
+    """Instantiate and return Indexer client object."""
+    indexer_address = "http://localhost:8980"
+    indexer_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    return indexer.IndexerClient(indexer_token, indexer_address)
 
 def dump_teal_assembly(file_path, program_fn_pointer):
     check_build_dir()
     with open('build/' + file_path, 'w') as f:
         compiled = program_fn_pointer()
         f.write(compiled)
-
 
 def load_compiled(file_path):
     try:
@@ -96,6 +110,12 @@ def sign_txn(unsigned_txn, private_key):
     """
     signed_tx = unsigned_txn.sign(private_key)
     return signed_tx
+
+
+def send_transactions(client, transactions):
+    transaction_id = client.send_transactions(transactions)
+    wait_for_txn_confirmation(client, transaction_id, 5)
+    return transaction_id
 
 def create_app_signed_txn(private_key,
                           public_key,
@@ -170,7 +190,8 @@ def create_app_unsigned_txn(
 def opt_in_app_signed_txn(private_key,
                           public_key,
                           params,
-                          app_id):
+                          app_id,
+                          foreign_assets=None):
     """
     Creates and signs an "opt in" transaction to an application
         Args:
@@ -183,7 +204,8 @@ def opt_in_app_signed_txn(private_key,
     """
     txn = transaction.ApplicationOptInTxn(public_key,
                                           params,
-                                          app_id)
+                                          app_id,
+                                          foreign_assets=foreign_assets)
     signed_txn = sign_txn(txn, private_key)
     return signed_txn, signed_txn.transaction.get_txid()
 
@@ -244,7 +266,7 @@ def create_asa_signed_txn(public_key, private_key, params, total=1e6, default_fr
     signed_txn = sign_txn(txn, private_key)
     return signed_txn
 
-def transfer_signed_txn(sender_private_key,
+def payment_signed_txn(sender_private_key,
                         sender_public_key,
                         receiver_public_key,
                         amount,
@@ -256,3 +278,70 @@ def transfer_signed_txn(sender_private_key,
     signed_txn = sign_txn(txn, sender_private_key)
     return signed_txn, signed_txn.transaction.get_txid()
 
+def create_logic_sig_signed_transaction(sender_private_key,
+                                        teal_source,
+                                        payment_transaction):
+    compiled_binary = compile_program(teal_source)
+    logic_sig = transaction.LogicSig(compiled_binary)
+    txn = transaction.LogicSigTransaction(payment_transaction, logic_sig)
+    signed_txn = sign_txn(txn, sender_private_key)
+    return signed_txn, signed_txn.transaction.get_txid()
+
+def transaction_info(transaction_id, indexer_timeout=61):
+    """Return transaction with provided id."""
+    timeout = 0
+    while timeout < indexer_timeout:
+        try:
+            transaction = _indexer_client().transaction(transaction_id)
+            break
+        except IndexerHTTPError:
+            time.sleep(1)
+            timeout += 1
+    else:
+        raise TimeoutError(
+            "Timeout reached waiting for transaction to be available in indexer"
+        )
+
+    return transaction
+
+def _cli_passphrase_for_account(address):
+    """Return passphrase for provided address."""
+    process = call_sandbox_command("goal", "account", "export", "-a", address)
+
+    if process.stderr:
+        raise RuntimeError(process.stderr.decode("utf8"))
+
+    passphrase = ""
+    parts = process.stdout.decode("utf8").split('"')
+    if len(parts) > 1:
+        passphrase = parts[1]
+    if passphrase == "":
+        raise ValueError(
+            "Can't retrieve passphrase from the address: %s\nOutput: %s"
+            % (address, process.stdout.decode("utf8"))
+        )
+    return passphrase
+
+
+def _sandbox_directory():
+    """Return full path to Algorand's sandbox executable.
+
+    The location of sandbox directory is retrieved either from the SANDBOX_DIR
+    environment variable or if it's not set then the location of sandbox directory
+    is implied to be the sibling of this Django project in the directory tree.
+    """
+    return os.environ.get("SANDBOX_DIR") or str(
+        Path(__file__).resolve().parent.parent / "sandbox"
+    )
+
+
+def _sandbox_executable():
+    """Return full path to Algorand's sandbox executable."""
+    return _sandbox_directory() + "/sandbox"
+
+
+def call_sandbox_command(*args):
+    """Call and return sandbox command composed from provided arguments."""
+    return subprocess.run(
+        [_sandbox_executable(), *args], stdin=pty.openpty()[1], capture_output=True
+    )

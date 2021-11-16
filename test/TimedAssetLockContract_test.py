@@ -4,14 +4,7 @@ from algosdk.v2client import algod
 from algosdk import account, mnemonic, constants
 from algosdk.encoding import encode_address, is_valid_address
 from algosdk.error import AlgodHTTPError, TemplateInputError
-
-from helpers import (
-    account_balance,
-    add_standalone_account,
-    fund_account,
-    call_sandbox_command,
-    transaction_info,
-)
+from akita_inu_asa_utils import *
 
 
 def setup_module(module):
@@ -22,25 +15,8 @@ def setup_module(module):
 
 @pytest.fixture(scope='class')
 def test_config():
-
-    #creator wallet
-    wallet1_Mnemonic, wallet1_publicKey = add_standalone_account()
-
-    #escrow wallet
-    wallet2_Mnemonic, wallet2_publicKey = add_standalone_account()
-
-    fund_account(wallet1_publicKey)
-    #fund_account(wallet2_publicKey)
-     
-    return {
-      "algodAddress": "http://localhost:4001",
-      "algodToken": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "asset_id": 3,
-      "wallet1_publicKey": wallet1_publicKey,
-      "wallet1_Mnemonic": wallet1_Mnemonic,
-      #"wallet2_publicKey": wallet2_publicKey,
-      #"wallet2_Mnemonic": wallet2_Mnemonic
-    }
+    from test.testingUtils import load_test_config
+    return load_test_config()
 
 @pytest.fixture
 def client(test_config):
@@ -91,18 +67,17 @@ class TestTimedAssetLockContract:
     def test_on_setup(self, app_id, test_config, client):
         from algosdk import mnemonic
         from akita_inu_asa_utils import noop_app_signed_txn, wait_for_txn_confirmation, getApplicationAddress, \
-            transfer_signed_txn
+            payment_signed_txn
 
         public_key = test_config['wallet1_publicKey']
         creator_mnemonic = test_config['wallet1_Mnemonic']
-        #asset_id = test_config['asset_id']
-        asset_id = client.account_info(public_key)['assets'][-1]['asset-id']
+        asset_id = test_config['asset_id']
         private_key = mnemonic.to_private_key(creator_mnemonic)
         params = client.suggested_params()
 
         #got to fund the contract
         app_public_key = getApplicationAddress(app_id)
-        txn, txn_id = transfer_signed_txn(private_key, public_key, app_public_key, 300000, params)
+        txn, txn_id = payment_signed_txn(private_key, public_key, app_public_key, 300000, params)
         client.send_transactions([txn])
         wait_for_txn_confirmation(client, txn_id, 5)
 
@@ -111,5 +86,23 @@ class TestTimedAssetLockContract:
                                           params,
                                           app_id,
                                           [asset_id])
+        client.send_transactions([txn])
+        wait_for_txn_confirmation(client, txn_id, 5)
+
+    def test_on_opt_in(self, app_id, test_config, client):
+        from algosdk import mnemonic
+        from akita_inu_asa_utils import opt_in_app_signed_txn, wait_for_txn_confirmation
+
+        public_key = test_config['wallet1_publicKey']
+        creator_mnemonic = test_config['wallet1_Mnemonic']
+        asset_id = test_config['asset_id']
+        private_key = mnemonic.to_private_key(creator_mnemonic)
+        params = client.suggested_params()
+
+        txn, txn_id = opt_in_app_signed_txn(private_key,
+                                            public_key,
+                                            params,
+                                            app_id,
+                                            foreign_assets=[asset_id])
         client.send_transactions([txn])
         wait_for_txn_confirmation(client, txn_id, 5)

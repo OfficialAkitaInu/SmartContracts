@@ -2,28 +2,11 @@ from algosdk.future import transaction
 from algosdk import account, mnemonic, logic, encoding
 from akita_inu_asa_utils import *
 from pyteal import *
-from helpers import create_fakita_inu_signed_txn
 
 
 def deploy_app(client, private_key, approval_program, clear_program, global_schema, local_schema, app_args):
     # define sender as creator
     public_key = account.address_from_private_key(private_key)
-
-    # create ASA
-    txid_asa = client.send_transaction(create_fakita_inu_signed_txn(public_key, private_key))
-    # Send the transaction to the network and retrieve the txid.
-
-    # Retrieve the asset ID of the newly created asset by first
-    # ensuring that the creation transaction was confirmed,
-    # then grabbing the asset id from the transaction.
-
-    # Wait for the transaction to be confirmed
-    wait_for_txn_confirmation(client, txid_asa, 5)
-
-    # get asset_id from tx
-    ptx = client.pending_transaction_info(txid_asa)
-    asset_id = ptx["asset-index"]
-    app_args[0] = asset_id
 
     # declare on_complete as NoOp
     on_complete = transaction.OnComplete.NoOpOC.real
