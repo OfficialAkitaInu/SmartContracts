@@ -44,7 +44,7 @@ def deploy_app(client, private_key, approval_program, clear_program, global_sche
 def deploy(algod_address, algod_token, creator_mnemonic, asset_id, end_time):
 
     private_key = mnemonic.to_private_key(creator_mnemonic)
-    public_key = account.address_from_private_key(creator_mnemonic)
+    public_key = account.address_from_private_key(private_key)
     algod_client = get_algod_client(algod_token,
                                     algod_address)
 

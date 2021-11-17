@@ -18,6 +18,11 @@ def check_build_dir():
     if not os.path.exists('build'):
         os.mkdir('build')
 
+def get_asset_balance(client, public_key, asset_id):
+    for asset in client.account_info(public_key)['assets']:
+        if asset['asset-id'] == asset_id:
+            return asset['amount']
+    return 0
 
 def generate_new_account():
     private_key, address = account.generate_account()
@@ -47,7 +52,25 @@ def compile_program(client, source_code, file_path=None):
         dump(base64.b64decode(compile_response['result']), 'build/' + file_path)
 
 
+# read user local state
+def read_local_state(client, addr, app_id):
+    results = client.account_info(addr)
+    print(results)
+    if len(results['apps-local-state']):
+        local_state = results['apps-local-state'][0]
+        for index in local_state:
+            if local_state[index] == app_id:
+                if 'key-value' in local_state.keys():
+                    return local_state['key-value']
 
+
+# read app global state
+def read_global_state(client, addr, app_id):
+    results = client.account_info(addr)
+    apps_created = results['created-apps']
+    for app in apps_created:
+        if app['id'] == app_id :
+            return app['params']['global-state']
 
 
 def dump_teal_assembly(file_path, program_fn_pointer):
@@ -173,6 +196,25 @@ def create_app_signed_txn(private_key,
     return signed_txn, signed_txn.transaction.get_txid()
 
 
+def update_app_signed_txn(private_key,
+                          public_key,
+                          params,
+                          app_id,
+                          approval_program,
+                          clear_program,
+                          app_args=None):
+
+    unsigned_txn = transaction.ApplicationUpdateTxn(public_key,
+                                                    params,
+                                                    app_id,
+                                                    approval_program,
+                                                    clear_program,
+                                                    app_args)
+
+    signed_txn = sign_txn(unsigned_txn, private_key)
+    return signed_txn, signed_txn.transaction.get_txid()
+
+
 def opt_in_app_signed_txn(private_key,
                           public_key,
                           params,
@@ -198,11 +240,22 @@ def opt_in_app_signed_txn(private_key,
     return signed_txn, signed_txn.transaction.get_txid()
 
 
+def opt_in_asset_signed_txn(private_key,
+                            public_key,
+                            params,
+                            asset_id):
+    txn = transaction.AssetOptInTxn(public_key,
+                                    params,
+                                    asset_id)
+    signed_txn = sign_txn(txn, private_key)
+    return signed_txn, signed_txn.transaction.get_txid()
+
+
 def noop_app_signed_txn(private_key,
-                          public_key,
-                          params,
-                          app_id,
-                          asset_ids=None):
+                        public_key,
+                        params,
+                        app_id,
+                        asset_ids=None):
     """
     Creates and signs an "noOp" transaction to an application
         Args:
@@ -222,22 +275,39 @@ def noop_app_signed_txn(private_key,
     return signed_txn, signed_txn.transaction.get_txid()
 
 
+def close_out_app_signed_txn(private_key,
+                          public_key,
+                          params,
+                          app_id,
+                          asset_ids=None):
+    txn = transaction.ApplicationCloseOutTxn(public_key,
+                                             params,
+                                             app_id,
+                                             foreign_assets=asset_ids)
+    signed_txn = sign_txn(txn, private_key)
+    return signed_txn, signed_txn.transaction.get_txid()
+
+
+def clear_state_out_app_signed_txn(private_key,
+                                   public_key,
+                                   params,
+                                   app_id,
+                                   asset_ids=None):
+    txn = transaction.ApplicationClearStateTxn(public_key,
+                                               params,
+                                               app_id,
+                                               foreign_assets=asset_ids)
+
+    signed_txn = sign_txn(txn, private_key)
+    return signed_txn, signed_txn.transaction.get_txid()
+
+
 def delete_app_signed_txn(private_key,
                           public_key,
                           params,
                           app_id,
                           asset_ids=None):
-    """
-    Creates and signs an "noOp" transaction to an application
-        Args:
-            private_key (str): private key of sender
-            public_key (str): public key of sender
-            params (???): parameters obtained from algod
-            app_id (int): id of application
-            asset_id (int): id of asset if any
-        Returns:
-            tuple: Tuple containing the signed transaction and signed transaction id
-    """
+
     txn = transaction.ApplicationDeleteTxn(public_key,
                                            params,
                                            app_id,
@@ -262,6 +332,7 @@ def create_asa_signed_txn(public_key, private_key, params, name="FOO", total=1e6
 
     signed_txn = sign_txn(txn, private_key)
     return signed_txn, signed_txn.transaction.get_txid()
+
 
 def payment_signed_txn(sender_private_key,
                         sender_public_key,
