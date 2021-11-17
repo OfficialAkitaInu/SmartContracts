@@ -13,6 +13,7 @@ from akita_inu_asa_utils import read_local_state, read_global_state, wait_for_tx
 NUM_TEST_ASSET = int(1e6)
 ESCROW_TIME_LENGTH = int(90)
 
+
 @pytest.fixture(scope='class')
 def test_config():
     from test.testing_utils import load_test_config
@@ -38,6 +39,7 @@ def wallet_1(test_config):
     # fund the wallet
     fund_account(wallet_1['publicKey'], test_config['fund_account_Mnemonic'])
     return wallet_1
+
 
 #this wallet is supposed to represent an adversarial wallet that is NOT meant to interact/change state of any portion of the app
 @pytest.fixture(scope='class')
@@ -232,6 +234,7 @@ def set_up(wallet, app_id, asset_ids, client):
     client.send_transactions([txn])
     wait_for_txn_confirmation(client, txn_id, 5)
 
+
 class TestTimedAssetLockContract:
     def test_build(self, client):
         from contracts.timed_asset_lock_contract.program import compile_app
@@ -379,7 +382,7 @@ class TestTimedAssetLockContract:
         global_state = read_global_state(client, public_key, app_id)
         assert global_state is None
 
-        #check that balance had returned to the rightful owner
+        # check that balance had returned to the rightful owner
         assert get_asset_balance(client, public_key, asset_id) == NUM_TEST_ASSET
         app_public_key = getApplicationAddress(app_id)
         assert 0 == get_asset_balance(client, app_public_key, asset_id)
