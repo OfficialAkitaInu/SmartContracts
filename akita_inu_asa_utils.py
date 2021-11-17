@@ -1,14 +1,41 @@
-import base64
-from algosdk.v2client import algod
+from algosdk.v2client import algod, indexer
 from algosdk.future import transaction
+from algosdk import encoding, account, mnemonic
+
+
 from joblib import dump, load
+import time
 import json
 import os
+import base64
+
+
+def getApplicationAddress(app_id):
+    return encoding.encode_address(encoding.checksum(b'appID' + app_id.to_bytes(8, 'big')))
 
 
 def check_build_dir():
     if not os.path.exists('build'):
         os.mkdir('build')
+
+
+def generate_new_account():
+    private_key, address = account.generate_account()
+    return mnemonic.from_private_key(private_key), private_key, address
+
+
+def delete_all_apps(client, private_key):
+    public_key = account.address_from_private_key(private_key)
+    apps = client.account_info(public_key)['created-apps']
+    for app in apps:
+        app_id = app['id']
+        signed_txn, txn_id = delete_app_signed_txn(private_key, public_key, client.suggested_params(), app_id)
+        try:
+            client.send_transactions([signed_txn])
+            wait_for_txn_confirmation(client, txn_id, 5)
+            print("app: " + str(app_id) + " deleted")
+        except:
+            print("app: " + str(app_id) + " not deleted")
 
 
 def compile_program(client, source_code, file_path=None):
@@ -18,6 +45,9 @@ def compile_program(client, source_code, file_path=None):
     else:
         check_build_dir()
         dump(base64.b64decode(compile_response['result']), 'build/' + file_path)
+
+
+
 
 
 def dump_teal_assembly(file_path, program_fn_pointer):
@@ -36,6 +66,11 @@ def load_compiled(file_path):
     return compiled
 
 
+def asset_id_from_create_txn(client, txn_id):
+    ptx = client.pending_transaction_info(txn_id)
+    asset_id = ptx["asset-index"]
+    return asset_id
+
 def load_developer_config(file_path='DeveloperConfig.json'):
     fp = open(file_path)
     return json.load(fp)
@@ -51,7 +86,7 @@ def write_schema(file_path, num_ints, num_bytes):
 
 
 def load_schema(file_path):
-    load('build/' + file_path)
+    return load('build/' + file_path)
 
 
 def wait_for_txn_confirmation(client, transaction_id, timeout):
@@ -95,6 +130,13 @@ def sign_txn(unsigned_txn, private_key):
     signed_tx = unsigned_txn.sign(private_key)
     return signed_tx
 
+
+def send_transactions(client, transactions):
+    transaction_id = client.send_transactions(transactions)
+    wait_for_txn_confirmation(client, transaction_id, 5)
+    return transaction_id
+
+
 def create_app_signed_txn(private_key,
                           public_key,
                           params,
@@ -102,7 +144,8 @@ def create_app_signed_txn(private_key,
                           approval_program,
                           clear_program,
                           global_schema,
-                          local_schema):
+                          local_schema,
+                          app_args):
     """
         Creates an signed "create app" transaction to an application
             Args:
@@ -118,53 +161,24 @@ def create_app_signed_txn(private_key,
                 tuple: Tuple containing the signed transaction and signed transaction id
     """
     unsigned_txn = transaction.ApplicationCreateTxn(public_key,
-                                           params,
-                                           on_complete,
-                                           approval_program,
-                                           clear_program,
-                                           global_schema,
-                                           local_schema)
+                                                    params,
+                                                    on_complete,
+                                                    approval_program,
+                                                    clear_program,
+                                                    global_schema,
+                                                    local_schema,
+                                                    app_args)
 
     signed_txn = sign_txn(unsigned_txn, private_key)
     return signed_txn, signed_txn.transaction.get_txid()
 
 
-def create_app_unsigned_txn(
-                       public_key,
-                       params,
-                       on_complete,
-                       approval_program,
-                       clear_program,
-                       global_schema,
-                       local_schema):
-    """
-        Creates an unsigned "create app" transaction to an application
-            Args:
-                public_key (str): public key of sender
-                params (???): parameters obtained from algod
-                on_complete (???):
-                approval_program (???): compiled approval program
-                clear_program (???): compiled clear program
-                global_schema (???): global schema variables
-                local_schema (???): local schema variables
-            Returns:
-                ApplicationOptInTxn: unsigned transaction
-    """
-    # create unsigned transaction
-    txn = transaction.ApplicationCreateTxn(public_key,
-                                           params,
-                                           on_complete,
-                                           approval_program,
-                                           clear_program,
-                                           global_schema,
-                                           local_schema)
-    return txn
-
-
 def opt_in_app_signed_txn(private_key,
                           public_key,
                           params,
-                          app_id):
+                          app_id,
+                          foreign_assets=None,
+                          app_args=None):
     """
     Creates and signs an "opt in" transaction to an application
         Args:
@@ -177,24 +191,107 @@ def opt_in_app_signed_txn(private_key,
     """
     txn = transaction.ApplicationOptInTxn(public_key,
                                           params,
-                                          app_id)
+                                          app_id,
+                                          foreign_assets=foreign_assets,
+                                          app_args=app_args)
     signed_txn = sign_txn(txn, private_key)
     return signed_txn, signed_txn.transaction.get_txid()
 
 
-def opt_in_app_unsigned_txn(public_key,
+def noop_app_signed_txn(private_key,
+                          public_key,
                           params,
-                          app_id):
+                          app_id,
+                          asset_ids=None):
     """
-    Creates an unsigned "opt in" transaction to an application
+    Creates and signs an "noOp" transaction to an application
         Args:
+            private_key (str): private key of sender
             public_key (str): public key of sender
             params (???): parameters obtained from algod
             app_id (int): id of application
+            asset_id (int): id of asset if any
         Returns:
-            ApplicationOptInTxn: unsigned transaction
+            tuple: Tuple containing the signed transaction and signed transaction id
     """
-    unsigned_txn = transaction.ApplicationOptInTxn(public_key,
-                                                   params,
-                                                   app_id)
-    return unsigned_txn
+    txn = transaction.ApplicationNoOpTxn(public_key,
+                                         params,
+                                         app_id,
+                                         foreign_assets=asset_ids)
+    signed_txn = sign_txn(txn, private_key)
+    return signed_txn, signed_txn.transaction.get_txid()
+
+
+def delete_app_signed_txn(private_key,
+                          public_key,
+                          params,
+                          app_id,
+                          asset_ids=None):
+    """
+    Creates and signs an "noOp" transaction to an application
+        Args:
+            private_key (str): private key of sender
+            public_key (str): public key of sender
+            params (???): parameters obtained from algod
+            app_id (int): id of application
+            asset_id (int): id of asset if any
+        Returns:
+            tuple: Tuple containing the signed transaction and signed transaction id
+    """
+    txn = transaction.ApplicationDeleteTxn(public_key,
+                                           params,
+                                           app_id,
+                                           foreign_assets=asset_ids)
+    signed_txn = sign_txn(txn, private_key)
+    return signed_txn, signed_txn.transaction.get_txid()
+
+
+def create_asa_signed_txn(public_key, private_key, params, name="FOO", total=1e6, default_frozen=False, decimals=0):
+    txn = transaction.AssetConfigTxn(
+        sender=public_key,
+        sp=params,
+        asset_name=name,
+        total=total,
+        default_frozen=default_frozen,
+        manager=public_key,
+        reserve=public_key,
+        freeze=public_key,
+        clawback=public_key,
+        url="https://path/to/my/asset/details",
+        decimals=decimals)
+
+    signed_txn = sign_txn(txn, private_key)
+    return signed_txn, signed_txn.transaction.get_txid()
+
+def payment_signed_txn(sender_private_key,
+                        sender_public_key,
+                        receiver_public_key,
+                        amount,
+                        params,
+                        asset_id=None):
+    if asset_id is None:
+        txn = transaction.PaymentTxn(sender_public_key,
+                                     params,
+                                     receiver_public_key,
+                                     amount)
+    else:
+        txn = transaction.AssetTransferTxn(sender_public_key,
+                                           params,
+                                           receiver_public_key,
+                                           amount,
+                                           asset_id)
+
+    signed_txn = sign_txn(txn, sender_private_key)
+    return signed_txn, signed_txn.transaction.get_txid()
+
+def create_logic_sig_signed_transaction(sender_private_key,
+                                        teal_source,
+                                        payment_transaction):
+    compiled_binary = compile_program(teal_source)
+    logic_sig = transaction.LogicSig(compiled_binary)
+    txn = transaction.LogicSigTransaction(payment_transaction, logic_sig)
+    signed_txn = sign_txn(txn, sender_private_key)
+    return signed_txn, signed_txn.transaction.get_txid()
+
+
+
