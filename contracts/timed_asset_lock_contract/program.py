@@ -91,6 +91,8 @@ def approval_program():
             And(
                 # The wallet triggering the setup must be the original creator and receiver.
                 Txn.sender() == App.globalGet(receiver_address_key),
+                # Sender must be opted in
+                App.optedIn(Txn.sender(), App.id()),
                 # This smart contract must be set up before the unlock timestamp.
                 Global.latest_timestamp() < App.globalGet(unlock_time_key),
             )
@@ -126,6 +128,8 @@ def approval_program():
             And(
                 # The wallet triggering the close must be the original creator and receiver.
                 Txn.sender() == App.globalGet(receiver_address_key),
+                # The wallet must be opted in
+                App.optedIn(Txn.sender(), App.id()),
                 # The current timestamp must be greater than the unlock timestamp. Otherwise
                 # this transaction will be rejected.
                 App.globalGet(unlock_time_key) <= Global.latest_timestamp(),
@@ -161,7 +165,7 @@ def approval_program():
 
 
 def clear_program():
-    return compileTeal(Approve(), Mode.Application, version=5)
+    return compileTeal(Reject(), Mode.Application, version=5)
 
 
 def compile_app(algod_client):
