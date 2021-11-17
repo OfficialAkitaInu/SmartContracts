@@ -1,5 +1,5 @@
 import json
-from algosdk import mnemonic
+from algosdk import mnemonic, account
 from algosdk.error import IndexerHTTPError
 from algosdk.v2client import indexer
 from akita_inu_asa_utils import wait_for_txn_confirmation, \
@@ -13,11 +13,11 @@ def load_test_config(file_path='./test/testConfig.json'):
     return json.load(fp)
 
 
-def fund_account(address, initial_funds=2000000):
+def fund_account(address, sender_mnemonic, initial_funds=2000000):
     test_config = load_test_config('./test/testConfig.json')
+    private_key = mnemonic.to_private_key(sender_mnemonic)
+    public_key = account.address_from_private_key(sender_mnemonic)
     client = get_algod_client(test_config['algodToken'], test_config['algodAddress'])
-    private_key = mnemonic.to_private_key(test_config['fund_account_Mnemonic'])
-    public_key = test_config['fund_account_public_key']
     txn, txn_id = payment_signed_txn(
         private_key,
         public_key,
@@ -54,6 +54,7 @@ def transaction_info_indexer(transaction_id, indexer_timeout=61):
         )
 
     return transaction
+
 
 def devnet_asset_id_from_create_txn(txn_id):
     return transaction_info_indexer(txn_id)['transaction']['created-asset-index']

@@ -1,5 +1,5 @@
-from Program import compile
-from Deployment import deploy
+from program import compile
+from deployment import deploy
 from akita_inu_asa_utils import *
 
 

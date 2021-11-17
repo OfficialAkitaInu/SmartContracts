@@ -41,9 +41,10 @@ def deploy_app(client, private_key, approval_program, clear_program, global_sche
 
 # asset_id is the ASAs ID
 # end time is the time to allow withdrawel from escrow
-def deploy(algod_address, algod_token, creator_public_key, creator_mnemonic, asset_id, end_time):
+def deploy(algod_address, algod_token, creator_mnemonic, asset_id, end_time):
 
     private_key = mnemonic.to_private_key(creator_mnemonic)
+    public_key = account.address_from_private_key(creator_mnemonic)
     algod_client = get_algod_client(algod_token,
                                     algod_address)
 
@@ -55,7 +56,7 @@ def deploy(algod_address, algod_token, creator_public_key, creator_mnemonic, ass
 
     app_args = [
         asset_id.to_bytes(8, "big"),
-        encoding.decode_address(creator_public_key),
+        encoding.decode_address(public_key),
         end_time.to_bytes(8, "big")
     ]
 

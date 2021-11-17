@@ -24,7 +24,8 @@ def generate_new_account():
     return mnemonic.from_private_key(private_key), private_key, address
 
 
-def deleteAllApps(client, public_key, private_key):
+def delete_all_apps(client, private_key):
+    public_key = account.address_from_private_key(private_key)
     apps = client.account_info(public_key)['created-apps']
     for app in apps:
         app_id = app['id']

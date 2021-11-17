@@ -1,4 +1,5 @@
-
+import sys
+sys.path.append('/home/palmerss/Desktop/SmartContracts/test')
 import time
 
 import pytest
@@ -10,7 +11,7 @@ from algosdk.error import AlgodHTTPError, TemplateInputError
 
 @pytest.fixture(scope='class')
 def test_config():
-    from test.testingUtils import load_test_config
+    from test.testing_utils import load_test_config
     return load_test_config()
 
 @pytest.fixture(scope='class')
@@ -24,14 +25,14 @@ def client(test_config):
 def wallet_1(test_config):
     from akita_inu_asa_utils import generate_new_account
     wallet_mnemonic, private_key, public_key = generate_new_account()
-    from testingUtils import fund_account
+    from testing_utils import fund_account
     wallet_1 = {}
     wallet_1['mnemonic'] = wallet_mnemonic
     wallet_1['publicKey'] = public_key
     wallet_1['privateKey'] = private_key
 
     # fund the wallet
-    fund_account(wallet_1['publicKey'])
+    fund_account(wallet_1['publicKey'], test_config['fund_account_Mnemonic'])
     return wallet_1
 
 @pytest.fixture(scope='class')
@@ -69,13 +70,12 @@ def end_time():
 # called in this file depend on order
 @pytest.fixture(scope='class')
 def app_id(test_config, asset_id, end_time, wallet_1):
-    from contracts.TimedAssetLockContract.Deployment import deploy
+    from contracts.timed_asset_lock_contract.deployment import deploy
 
     algod_address = test_config['algodAddress']
     algod_token = test_config['algodToken']
-    creater_public_key = wallet_1['publicKey']
     creator_mnemonic = wallet_1['mnemonic']
-    app_id = deploy(algod_address, algod_token, creater_public_key, creator_mnemonic, asset_id, end_time)
+    app_id = deploy(algod_address, algod_token, creator_mnemonic, asset_id, end_time)
     return app_id
 
 
@@ -88,7 +88,7 @@ def clearBuildFolder():
 
 class TestTimedAssetLockContract:
     def test_build(self, client):
-        from contracts.TimedAssetLockContract.Program import compile
+        from contracts.timed_asset_lock_contract.program import compile
         clearBuildFolder()
         import os
         compile(client)
@@ -100,9 +100,11 @@ class TestTimedAssetLockContract:
         assert os.path.exists('./build/globalSchema')
 
     def test_deploy(self, app_id, client, asset_id, wallet_1):
-        from akita_inu_asa_utils import getApplicationAddress, \
-            payment_signed_txn, \
+        from akita_inu_asa_utils import (
+            getApplicationAddress,
+            payment_signed_txn,
             wait_for_txn_confirmation
+        )
         assert app_id
 
         # got to fund the contract with algo
@@ -114,10 +116,13 @@ class TestTimedAssetLockContract:
         client.send_transactions([txn])
         wait_for_txn_confirmation(client, txn_id, 5)
 
-
     def test_on_setup(self, app_id, wallet_1, asset_id, client):
-        from akita_inu_asa_utils import noop_app_signed_txn, wait_for_txn_confirmation, getApplicationAddress, \
+        from akita_inu_asa_utils import (
+            noop_app_signed_txn,
+            wait_for_txn_confirmation,
+            getApplicationAddress,
             payment_signed_txn
+        )
         params = client.suggested_params()
 
         txn, txn_id = noop_app_signed_txn(wallet_1['privateKey'],
