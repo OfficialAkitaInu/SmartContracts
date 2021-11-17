@@ -1,34 +1,59 @@
 import json
+from algosdk import mnemonic
+from algosdk.error import IndexerHTTPError
+from algosdk.v2client import indexer
+from akita_inu_asa_utils import wait_for_txn_confirmation, \
+    payment_signed_txn, \
+    get_algod_client
+import time
+
 
 def load_test_config(file_path='./test/testConfig.json'):
     fp = open(file_path)
     return json.load(fp)
 
-def _initial_funds_address():
-    """Get the address of initially created account having enough funds.
 
-    Such an account is used to transfer initial funds for the accounts
-    created in this tutorial.
-    """
-    return next(
-        (
-            account.get("address")
-            for account in _indexer_client().accounts().get("accounts", [{}, {}])
-            if account.get("created-at-round") == 0
-            and account.get("status") == "Offline"  # "Online" for devMode
-        ),
-        None,
-    )
-
-def fund_account(address, initial_funds=1000000000):
-    """Fund provided `address` with `initial_funds` amount of microAlgos."""
-    initial_funds_address = _initial_funds_address()
-    if initial_funds_address is None:
-        raise Exception("Initial funds weren't transferred!")
-    _add_transaction(
-        initial_funds_address,
+def fund_account(address, initial_funds=2000000):
+    test_config = load_test_config('./test/testConfig.json')
+    client = get_algod_client(test_config['algodToken'], test_config['algodAddress'])
+    private_key = mnemonic.to_private_key(test_config['fund_account_Mnemonic'])
+    public_key = test_config['fund_account_public_key']
+    txn, txn_id = payment_signed_txn(
+        private_key,
+        public_key,
         address,
-        _cli_passphrase_for_account(initial_funds_address),
         initial_funds,
-        "Initial funds",
+        client.suggested_params(),
     )
+    client.send_transaction(txn)
+    wait_for_txn_confirmation(client, txn_id, 5)
+
+
+#WARNING INDEXER IS NOT AVAILABLE IN TESTNET/MAINNET
+def indexer_client():
+    """Instantiate and return Indexer client object."""
+
+    indexer_address = "http://localhost:8980"
+    indexer_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    return indexer.IndexerClient(indexer_token, indexer_address)
+
+
+def transaction_info_indexer(transaction_id, indexer_timeout=61):
+    """Return transaction with provided id."""
+    timeout = 0
+    while timeout < indexer_timeout:
+        try:
+            transaction = indexer_client().transaction(transaction_id)
+            break
+        except IndexerHTTPError:
+            time.sleep(1)
+            timeout += 1
+    else:
+        raise TimeoutError(
+            "Timeout reached waiting for transaction to be available in indexer"
+        )
+
+    return transaction
+
+def devnet_asset_id_from_create_txn(txn_id):
+    return transaction_info_indexer(txn_id)['transaction']['created-asset-index']

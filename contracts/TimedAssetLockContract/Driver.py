@@ -18,10 +18,9 @@ def main():
     algod_address = developer_config['algodAddress']
     algod_token = developer_config['algodToken']
     creator_mnemonic = developer_config['creatorMnemonic']
-    creater_public_key = developer_config['creatorAddress']
+    creator_public_key = developer_config['creatorAddress']
 
-
-    #deploy(algod_address, algod_token, creater_public_key, creator_mnemonic, asset_id, end_time)
-    #print("Program Deployed")
+    deploy(algod_address, algod_token, creator_public_key, creator_mnemonic, asset_id, end_time)
+    print("Program Deployed")
 
 main()

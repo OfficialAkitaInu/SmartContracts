@@ -1,27 +1,41 @@
 from algosdk.v2client import algod, indexer
 from algosdk.future import transaction
 from algosdk import encoding, account, mnemonic
-from algosdk.error import IndexerHTTPError
+
 
 from joblib import dump, load
 import time
 import json
 import os
-from pathlib import Path
 import base64
-import subprocess
-import pty
+
 
 def getApplicationAddress(app_id):
     return encoding.encode_address(encoding.checksum(b'appID' + app_id.to_bytes(8, 'big')))
+
 
 def check_build_dir():
     if not os.path.exists('build'):
         os.mkdir('build')
 
-def add_new_account():
+
+def generate_new_account():
     private_key, address = account.generate_account()
-    return mnemonic.from_private_key(private_key), address
+    return mnemonic.from_private_key(private_key), private_key, address
+
+
+def deleteAllApps(client, public_key, private_key):
+    apps = client.account_info(public_key)['created-apps']
+    for app in apps:
+        app_id = app['id']
+        signed_txn, txn_id = delete_app_signed_txn(private_key, public_key, client.suggested_params(), app_id)
+        try:
+            client.send_transactions([signed_txn])
+            wait_for_txn_confirmation(client, txn_id, 5)
+            print("app: " + str(app_id) + " deleted")
+        except:
+            print("app: " + str(app_id) + " not deleted")
+
 
 def compile_program(client, source_code, file_path=None):
     compile_response = client.compile(source_code)
@@ -31,17 +45,16 @@ def compile_program(client, source_code, file_path=None):
         check_build_dir()
         dump(base64.b64decode(compile_response['result']), 'build/' + file_path)
 
-def _indexer_client():
-    """Instantiate and return Indexer client object."""
-    indexer_address = "http://localhost:8980"
-    indexer_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-    return indexer.IndexerClient(indexer_token, indexer_address)
+
+
+
 
 def dump_teal_assembly(file_path, program_fn_pointer):
     check_build_dir()
     with open('build/' + file_path, 'w') as f:
         compiled = program_fn_pointer()
         f.write(compiled)
+
 
 def load_compiled(file_path):
     try:
@@ -51,6 +64,11 @@ def load_compiled(file_path):
         exit(-1)
     return compiled
 
+
+def asset_id_from_create_txn(client, txn_id):
+    ptx = client.pending_transaction_info(txn_id)
+    asset_id = ptx["asset-index"]
+    return asset_id
 
 def load_developer_config(file_path='DeveloperConfig.json'):
     fp = open(file_path)
@@ -117,6 +135,7 @@ def send_transactions(client, transactions):
     wait_for_txn_confirmation(client, transaction_id, 5)
     return transaction_id
 
+
 def create_app_signed_txn(private_key,
                           public_key,
                           params,
@@ -153,45 +172,12 @@ def create_app_signed_txn(private_key,
     return signed_txn, signed_txn.transaction.get_txid()
 
 
-def create_app_unsigned_txn(
-                       public_key,
-                       params,
-                       on_complete,
-                       approval_program,
-                       clear_program,
-                       global_schema,
-                       local_schema,
-                       app_args):
-    """
-        Creates an unsigned "create app" transaction to an application
-            Args:
-                public_key (str): public key of sender
-                params (???): parameters obtained from algod
-                on_complete (???):
-                approval_program (???): compiled approval program
-                clear_program (???): compiled clear program
-                global_schema (???): global schema variables
-                local_schema (???): local schema variables
-            Returns:
-                ApplicationOptInTxn: unsigned transaction
-    """
-    # create unsigned transaction
-    txn = transaction.ApplicationCreateTxn(public_key,
-                                           params,
-                                           on_complete,
-                                           approval_program,
-                                           clear_program,
-                                           global_schema,
-                                           local_schema,
-                                           app_args)
-    return txn
-
-
 def opt_in_app_signed_txn(private_key,
                           public_key,
                           params,
                           app_id,
-                          foreign_assets=None):
+                          foreign_assets=None,
+                          app_args=None):
     """
     Creates and signs an "opt in" transaction to an application
         Args:
@@ -205,27 +191,11 @@ def opt_in_app_signed_txn(private_key,
     txn = transaction.ApplicationOptInTxn(public_key,
                                           params,
                                           app_id,
-                                          foreign_assets=foreign_assets)
+                                          foreign_assets=foreign_assets,
+                                          app_args=app_args)
     signed_txn = sign_txn(txn, private_key)
     return signed_txn, signed_txn.transaction.get_txid()
 
-
-def opt_in_app_unsigned_txn(public_key,
-                          params,
-                          app_id):
-    """
-    Creates an unsigned "opt in" transaction to an application
-        Args:
-            public_key (str): public key of sender
-            params (???): parameters obtained from algod
-            app_id (int): id of application
-        Returns:
-            ApplicationOptInTxn: unsigned transaction
-    """
-    unsigned_txn = transaction.ApplicationOptInTxn(public_key,
-                                                   params,
-                                                   app_id)
-    return unsigned_txn
 
 def noop_app_signed_txn(private_key,
                           public_key,
@@ -250,10 +220,36 @@ def noop_app_signed_txn(private_key,
     signed_txn = sign_txn(txn, private_key)
     return signed_txn, signed_txn.transaction.get_txid()
 
-def create_asa_signed_txn(public_key, private_key, params, total=1e6, default_frozen=False, decimals=0):
+
+def delete_app_signed_txn(private_key,
+                          public_key,
+                          params,
+                          app_id,
+                          asset_ids=None):
+    """
+    Creates and signs an "noOp" transaction to an application
+        Args:
+            private_key (str): private key of sender
+            public_key (str): public key of sender
+            params (???): parameters obtained from algod
+            app_id (int): id of application
+            asset_id (int): id of asset if any
+        Returns:
+            tuple: Tuple containing the signed transaction and signed transaction id
+    """
+    txn = transaction.ApplicationDeleteTxn(public_key,
+                                           params,
+                                           app_id,
+                                           foreign_assets=asset_ids)
+    signed_txn = sign_txn(txn, private_key)
+    return signed_txn, signed_txn.transaction.get_txid()
+
+
+def create_asa_signed_txn(public_key, private_key, params, name="FOO", total=1e6, default_frozen=False, decimals=0):
     txn = transaction.AssetConfigTxn(
         sender=public_key,
         sp=params,
+        asset_name=name,
         total=total,
         default_frozen=default_frozen,
         manager=public_key,
@@ -264,17 +260,26 @@ def create_asa_signed_txn(public_key, private_key, params, total=1e6, default_fr
         decimals=decimals)
 
     signed_txn = sign_txn(txn, private_key)
-    return signed_txn
+    return signed_txn, signed_txn.transaction.get_txid()
 
 def payment_signed_txn(sender_private_key,
                         sender_public_key,
                         receiver_public_key,
                         amount,
-                        params):
-    txn = transaction.PaymentTxn(sender_public_key,
-                                 params,
-                                 receiver_public_key,
-                                 amount)
+                        params,
+                        asset_id=None):
+    if asset_id is None:
+        txn = transaction.PaymentTxn(sender_public_key,
+                                     params,
+                                     receiver_public_key,
+                                     amount)
+    else:
+        txn = transaction.AssetTransferTxn(sender_public_key,
+                                           params,
+                                           receiver_public_key,
+                                           amount,
+                                           asset_id)
+
     signed_txn = sign_txn(txn, sender_private_key)
     return signed_txn, signed_txn.transaction.get_txid()
 
@@ -287,61 +292,5 @@ def create_logic_sig_signed_transaction(sender_private_key,
     signed_txn = sign_txn(txn, sender_private_key)
     return signed_txn, signed_txn.transaction.get_txid()
 
-def transaction_info(transaction_id, indexer_timeout=61):
-    """Return transaction with provided id."""
-    timeout = 0
-    while timeout < indexer_timeout:
-        try:
-            transaction = _indexer_client().transaction(transaction_id)
-            break
-        except IndexerHTTPError:
-            time.sleep(1)
-            timeout += 1
-    else:
-        raise TimeoutError(
-            "Timeout reached waiting for transaction to be available in indexer"
-        )
-
-    return transaction
-
-def _cli_passphrase_for_account(address):
-    """Return passphrase for provided address."""
-    process = call_sandbox_command("goal", "account", "export", "-a", address)
-
-    if process.stderr:
-        raise RuntimeError(process.stderr.decode("utf8"))
-
-    passphrase = ""
-    parts = process.stdout.decode("utf8").split('"')
-    if len(parts) > 1:
-        passphrase = parts[1]
-    if passphrase == "":
-        raise ValueError(
-            "Can't retrieve passphrase from the address: %s\nOutput: %s"
-            % (address, process.stdout.decode("utf8"))
-        )
-    return passphrase
 
 
-def _sandbox_directory():
-    """Return full path to Algorand's sandbox executable.
-
-    The location of sandbox directory is retrieved either from the SANDBOX_DIR
-    environment variable or if it's not set then the location of sandbox directory
-    is implied to be the sibling of this Django project in the directory tree.
-    """
-    return os.environ.get("SANDBOX_DIR") or str(
-        Path(__file__).resolve().parent.parent / "sandbox"
-    )
-
-
-def _sandbox_executable():
-    """Return full path to Algorand's sandbox executable."""
-    return _sandbox_directory() + "/sandbox"
-
-
-def call_sandbox_command(*args):
-    """Call and return sandbox command composed from provided arguments."""
-    return subprocess.run(
-        [_sandbox_executable(), *args], stdin=pty.openpty()[1], capture_output=True
-    )
