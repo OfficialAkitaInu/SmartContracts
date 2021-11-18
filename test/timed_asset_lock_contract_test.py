@@ -16,7 +16,7 @@ ESCROW_TIME_LENGTH = int(90)
 
 @pytest.fixture(scope='class')
 def test_config():
-    from test.testing_utils import load_test_config
+    from testing_utils import load_test_config
     return load_test_config()
 
 
@@ -34,10 +34,10 @@ def wallet_1(test_config):
     from testing_utils import fund_account
     wallet_mnemonic, private_key, public_key = generate_new_account()
 
-    wallet_1 = {'mnemonic': wallet_mnemonic, 'publicKey': public_key, 'privateKey': private_key}
+    wallet_1 = {'mnemonic': wallet_mnemonic, 'public_key': public_key, 'private_key': private_key}
 
     # fund the wallet
-    fund_account(wallet_1['publicKey'], test_config['fund_account_Mnemonic'])
+    fund_account(wallet_1['public_key'], test_config['fund_account_mnemonic'])
     return wallet_1
 
 
@@ -47,8 +47,8 @@ def wallet_2(test_config, asset_id, client):
     from akita_inu_asa_utils import generate_new_account, opt_in_asset_signed_txn
     from testing_utils import fund_account
     wallet_mnemonic, private_key, public_key = generate_new_account()
-    wallet_2 = {'mnemonic': wallet_mnemonic, 'publicKey': public_key, 'privateKey': private_key}
-    fund_account(wallet_2['publicKey'], test_config['fund_account_Mnemonic'])
+    wallet_2 = {'mnemonic': wallet_mnemonic, 'public_key': public_key, 'private_key': private_key}
+    fund_account(wallet_2['public_key'], test_config['fund_account_mnemonic'])
 
     params = client.suggested_params()
     opt_in_asset_signed_txn(private_key, public_key, params, asset_id)
@@ -60,8 +60,8 @@ def asset_id(test_config, wallet_1, client):
     from akita_inu_asa_utils import( create_asa_signed_txn,
         asset_id_from_create_txn)
     params = client.suggested_params()
-    txn, txn_id = create_asa_signed_txn(wallet_1['publicKey'],
-                                        wallet_1['privateKey'],
+    txn, txn_id = create_asa_signed_txn(wallet_1['public_key'],
+                                        wallet_1['private_key'],
                                         params,
                                         total=NUM_TEST_ASSET)
     client.send_transactions([txn])
@@ -122,8 +122,8 @@ def assert_adversary_actions(app_id, wallet, client, asset_id, adversary_wallet=
                                      clear_state_out_app_signed_txn,
                                      compile_program)
     params = client.suggested_params()
-    public_key = wallet['publicKey']
-    private_key = wallet['privateKey']
+    public_key = wallet['public_key']
+    private_key = wallet['private_key']
     if adversary_wallet:
         # try to opt in as advesary
         txn, txn_id = opt_in_app_signed_txn(private_key,
@@ -198,8 +198,8 @@ def opt_out(wallet, app_id, asset_ids, client):
     from akita_inu_asa_utils import clear_state_out_app_signed_txn
 
     params = client.suggested_params()
-    public_key = wallet['publicKey']
-    private_key = wallet['privateKey']
+    public_key = wallet['public_key']
+    private_key = wallet['private_key']
     txn, txn_id = clear_state_out_app_signed_txn(private_key,
                                                  public_key,
                                                  params,
@@ -214,8 +214,8 @@ def opt_in(wallet, app_id, asset_ids, client):
 
     params = client.suggested_params()
 
-    txn, txn_id = opt_in_app_signed_txn(wallet['privateKey'],
-                                        wallet['publicKey'],
+    txn, txn_id = opt_in_app_signed_txn(wallet['private_key'],
+                                        wallet['public_key'],
                                         params,
                                         app_id,
                                         foreign_assets=asset_ids)
@@ -226,8 +226,8 @@ def opt_in(wallet, app_id, asset_ids, client):
 def set_up(wallet, app_id, asset_ids, client):
     from akita_inu_asa_utils import noop_app_signed_txn
     params = client.suggested_params()
-    txn, txn_id = noop_app_signed_txn(wallet['privateKey'],
-                                      wallet['publicKey'],
+    txn, txn_id = noop_app_signed_txn(wallet['private_key'],
+                                      wallet['public_key'],
                                       params,
                                       app_id,
                                       asset_ids)
@@ -241,10 +241,10 @@ class TestTimedAssetLockContract:
         clear_build_folder()
         import os
         compile_app(client)
-        assert os.path.exists('./build/assetTimedVault_Approval.compiled')
-        assert os.path.exists('./build/assetTimedVault_Clear.compiled')
-        assert os.path.exists('./build/assetTimedVault_Approval.teal')
-        assert os.path.exists('./build/assetTimedVault_Clear.teal')
+        assert os.path.exists('./build/asset_timed_vault_approval.compiled')
+        assert os.path.exists('./build/asset_timed_vault_clear.compiled')
+        assert os.path.exists('./build/asset_timed_vault_approval.teal')
+        assert os.path.exists('./build/asset_timed_vault_clear.teal')
         assert os.path.exists('./build/globalSchema')
         assert os.path.exists('./build/globalSchema')
 
@@ -255,8 +255,8 @@ class TestTimedAssetLockContract:
             wait_for_txn_confirmation
         )
         assert app_id
-        public_key = wallet_1['publicKey']
-        private_key = wallet_1['privateKey']
+        public_key = wallet_1['public_key']
+        private_key = wallet_1['private_key']
 
         local_state = read_local_state(client, public_key, app_id)
         global_state = read_global_state(client, public_key, app_id)
@@ -281,7 +281,7 @@ class TestTimedAssetLockContract:
         with pytest.raises(AlgodHTTPError):
             set_up(wallet_1, app_id, [asset_id], client)
 
-        public_key = wallet_1['publicKey']
+        public_key = wallet_1['public_key']
         opt_in(wallet_1, app_id, [asset_id], client)
 
         local_state = read_local_state(client, public_key, app_id)
@@ -301,8 +301,8 @@ class TestTimedAssetLockContract:
 
         set_up(wallet_1, app_id, [asset_id], client)
 
-        public_key = wallet_1['publicKey']
-        private_key = wallet_1['privateKey']
+        public_key = wallet_1['public_key']
+        private_key = wallet_1['private_key']
         local_state = read_local_state(client, public_key, app_id)
 
         global_state = read_global_state(client, public_key, app_id)
@@ -334,8 +334,8 @@ class TestTimedAssetLockContract:
                                          get_asset_balance,
                                          getApplicationAddress)
 
-        public_key = wallet_1['publicKey']
-        private_key = wallet_1['privateKey']
+        public_key = wallet_1['public_key']
+        private_key = wallet_1['private_key']
         params = client.suggested_params()
 
         txn, txn_id = delete_app_signed_txn(private_key, public_key, params, app_id, [asset_id])
@@ -363,10 +363,10 @@ class TestTimedAssetLockContract:
 
         # try to cash out as the adversarial wallet
         with pytest.raises(AlgodHTTPError):
-            cash_out(client, wallet_2['publicKey'], wallet_2['privateKey'], app_id, [asset_id])
+            cash_out(client, wallet_2['public_key'], wallet_2['private_key'], app_id, [asset_id])
 
-        public_key = wallet_1['publicKey']
-        private_key = wallet_1['privateKey']
+        public_key = wallet_1['public_key']
+        private_key = wallet_1['private_key']
 
         # try to cash out as the intended wallet, but not opted in
         opt_out(wallet_1, app_id, [asset_id], client)

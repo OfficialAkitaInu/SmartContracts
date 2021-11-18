@@ -169,11 +169,11 @@ def clear_program():
 
 
 def compile_app(algod_client):
-    dump_teal_assembly('assetTimedVault_Approval.teal', approval_program)
-    dump_teal_assembly('assetTimedVault_Clear.teal', clear_program)
+    dump_teal_assembly('asset_timed_vault_approval.teal', approval_program)
+    dump_teal_assembly('asset_timed_vault_clear.teal', clear_program)
 
-    compile_program(algod_client, approval_program(), 'assetTimedVault_Approval.compiled')
-    compile_program(algod_client, clear_program(), 'assetTimedVault_Clear.compiled')
+    compile_program(algod_client, approval_program(), 'asset_timed_vault_approval.compiled')
+    compile_program(algod_client, clear_program(), 'asset_timed_vault_clear.compiled')
 
     write_schema(file_path='localSchema',
                  num_ints=0,

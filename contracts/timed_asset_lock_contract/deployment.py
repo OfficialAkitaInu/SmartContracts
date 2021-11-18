@@ -48,8 +48,8 @@ def deploy(algod_address, algod_token, creator_mnemonic, asset_id, end_time):
     algod_client = get_algod_client(algod_token,
                                     algod_address)
 
-    approval_program = load_compiled(file_path='assetTimedVault_Approval.compiled')
-    clear_program = load_compiled(file_path='assetTimedVault_Clear.compiled')
+    approval_program = load_compiled(file_path='asset_timed_vault_approval.compiled')
+    clear_program = load_compiled(file_path='asset_timed_vault_clear.compiled')
 
     global_schema = load_schema(file_path='globalSchema')
     local_schema = load_schema(file_path='localSchema')
@@ -60,5 +60,11 @@ def deploy(algod_address, algod_token, creator_mnemonic, asset_id, end_time):
         end_time.to_bytes(8, "big")
     ]
 
-    app_id = deploy_app(algod_client, private_key, approval_program, clear_program, global_schema, local_schema, app_args)
+    app_id = deploy_app(algod_client,
+                        private_key,
+                        approval_program,
+                        clear_program,
+                        global_schema,
+                        local_schema,
+                        app_args)
     return app_id
