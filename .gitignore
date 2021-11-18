@@ -1,0 +1,10 @@
+data/*
+build/*
+venv/*
+.idea/*
+/contracts/TimedAssetLockContract/__pycache__/*
+__pycache__
+/__pycache__/*
+/test/testConfig.json
+/DeveloperConfig.json
+

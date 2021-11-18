@@ -1,0 +1,6 @@
+{
+  "algodAddress": "http://localhost:4001",
+  "algodToken": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "creatorAddress": "PUBLIC KEY GOES HERE",
+  "creatorMnemonic": "25 word Mnemonic for your ****TEST WALLET****, DO NOT PUT YOUR REAL WALLET MNEMONIC HERE"
+}
