@@ -72,9 +72,9 @@ sender_mnemonic = "ecology average boost pony around voice daring story host bro
 algod_address = "http://localhost:4001"
 algod_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
-# helper function to compile program source
+# helper function to compile_app program source
 def compile_smart_signature(client, source_code):
-    compile_response = client.compile(source_code)
+    compile_response = client.compile_app(source_code)
     return compile_response['result'], compile_response['hash']
 
 # helper function that converts a mnemonic passphrase into a private signing key

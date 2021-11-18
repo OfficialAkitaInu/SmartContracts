@@ -1,4 +1,4 @@
-from program import compile
+from program import compile_app
 from deployment import deploy
 from akita_inu_asa_utils import *
 
@@ -10,7 +10,7 @@ def main():
     algod_token = developer_config['algodToken']
     algod_client = get_algod_client(algod_token, algod_address)
 
-    compile(algod_client)
+    compile_app(algod_client)
     print("Program Compiled")
 
     asset_id = 44887300  # ASSET ID

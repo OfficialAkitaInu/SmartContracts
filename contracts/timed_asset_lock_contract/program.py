@@ -91,6 +91,8 @@ def approval_program():
             And(
                 # The wallet triggering the setup must be the original creator and receiver.
                 Txn.sender() == App.globalGet(receiver_address_key),
+                # Sender must be opted in
+                App.optedIn(Txn.sender(), App.id()),
                 # This smart contract must be set up before the unlock timestamp.
                 Global.latest_timestamp() < App.globalGet(unlock_time_key),
             )
@@ -126,6 +128,8 @@ def approval_program():
             And(
                 # The wallet triggering the close must be the original creator and receiver.
                 Txn.sender() == App.globalGet(receiver_address_key),
+                # The wallet must be opted in
+                App.optedIn(Txn.sender(), App.id()),
                 # The current timestamp must be greater than the unlock timestamp. Otherwise
                 # this transaction will be rejected.
                 App.globalGet(unlock_time_key) <= Global.latest_timestamp(),
@@ -150,28 +154,30 @@ def approval_program():
                 Txn.on_completion() == OnComplete.CloseOut,
                 # This smart contract cannot be updated.
                 Txn.on_completion() == OnComplete.UpdateApplication,
+                # This smart contract cannot be cleared of local state
+                Txn.on_completion() == OnComplete.ClearState
             ),
             Reject(),
         ],
     )
 
-    return (compileTeal(program, Mode.Application, version=5))
+    return compileTeal(program, Mode.Application, version=5)
 
 
 def clear_program():
-    return (compileTeal(Approve(), Mode.Application, version=5))
+    return compileTeal(Reject(), Mode.Application, version=5)
 
 
-def compile(algodClient):
-    dump_teal_assembly('assetTimedVault_Approval.teal', approval_program)
-    dump_teal_assembly('assetTimedVault_Clear.teal', clear_program)
+def compile_app(algod_client):
+    dump_teal_assembly('asset_timed_vault_approval.teal', approval_program)
+    dump_teal_assembly('asset_timed_vault_clear.teal', clear_program)
 
-    compile_program(algodClient, approval_program(), 'assetTimedVault_Approval.compiled')
-    compile_program(algodClient, clear_program(), 'assetTimedVault_Clear.compiled')
+    compile_program(algod_client, approval_program(), 'asset_timed_vault_approval.compiled')
+    compile_program(algod_client, clear_program(), 'asset_timed_vault_clear.compiled')
 
     write_schema(file_path='localSchema',
-                 num_ints=3,
-                 num_bytes=3)
+                 num_ints=0,
+                 num_bytes=0)
     write_schema(file_path='globalSchema',
                  num_ints=3,
                  num_bytes=3)

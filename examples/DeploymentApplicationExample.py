@@ -17,9 +17,9 @@ creator_mnemonic = "purpose day enable vacant donkey wide pave ticket beauty wid
 algod_address = 'http://localhost:4001'
 algod_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
-# helper function to compile program source
+# helper function to compile_app program source
 def compile_program(client, source_code):
-    compile_response = client.compile(source_code)
+    compile_response = client.compile_app(source_code)
     return base64.b64decode(compile_response['result'])
 
 # helper function that converts a mnemonic passphrase into a private signing key
@@ -218,21 +218,21 @@ def main() :
     global_schema = transaction.StateSchema(global_ints, global_bytes)
     local_schema = transaction.StateSchema(local_ints, local_bytes)
 
-    # compile program to TEAL assembly
+    # compile_app program to TEAL assembly
     with open("./approval.teal", "w") as f:
         approval_program_teal = approval_program()
         f.write(approval_program_teal)
 
 
-    # compile program to TEAL assembly
+    # compile_app program to TEAL assembly
     with open("./clear.teal", "w") as f:
         clear_state_program_teal = clear_state_program()
         f.write(clear_state_program_teal)
 
-    # compile program to binary
+    # compile_app program to binary
     approval_program_compiled = compile_program(algod_client, approval_program_teal)
 
-    # compile program to binary
+    # compile_app program to binary
     clear_state_program_compiled = compile_program(algod_client, clear_state_program_teal)
 
     print("--------------------------------------------")

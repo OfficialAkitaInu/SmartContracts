@@ -3,6 +3,5 @@
   "algodToken": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "indexerAddress": "http://localhost:8980",
   "indexerToken": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  "fund_account_public_key": "DO NOT STORE YOUR REAL KEY HERE",
-  "fund_account_Mnemonic": "DO NOT STORE YOUR REAL KEY HERE"
+  "fund_account_mnemonic": "DO NOT STORE YOUR REAL KEY HERE",
 }

@@ -16,7 +16,7 @@ def load_test_config(file_path='./test/testConfig.json'):
 def fund_account(address, sender_mnemonic, initial_funds=2000000):
     test_config = load_test_config('./test/testConfig.json')
     private_key = mnemonic.to_private_key(sender_mnemonic)
-    public_key = account.address_from_private_key(sender_mnemonic)
+    public_key = account.address_from_private_key(private_key)
     client = get_algod_client(test_config['algodToken'], test_config['algodAddress'])
     txn, txn_id = payment_signed_txn(
         private_key,
