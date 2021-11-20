@@ -11,10 +11,31 @@ For a detailed description on how to contribute to a Git project, read through
 this guide from data school:
 https://www.dataschool.io/how-to-contribute-on-github/
 
+Additionaly, developers woorking in this repo should follow the practice of a forking workflow.
+The link below describes that workflow in detail, and you can easily google additional information 
+or ask others on the team more info.
+https://docs.gitlab.com/ee/user/project/repository/forking_workflow.html
+
+We follow PEP8 standards which can be found below.
+https://www.python.org/dev/peps/pep-0008/
+
 ##### Note
 This section will be updated soon with instruction on how to stand up and use Docker
 instead of using a local or virtual environment. To that end, you'll find a docker folder
 and other assets in this repo, but they are *not* currently functioning and shouldn't be used.
+
+###### IGNORE
+To get started you'll need docker installed
+
+The docker-compose is a work in progress...
+but the DockerFile works
+This project is written using pyteal, the python library used to write smart contracts for the Algorand blockchain
+
+To build run `make build`
+To run container in interactive mode run `make run`
+
+[Docker Compose Setup](docs/start_docker_readme.md)
+###### IGNORE
 
 
 ### 1. Clone the repo
@@ -116,47 +137,3 @@ test/timed_asset_lock_contract_test.py ......                                   
 
 ===================== 6 passed in 141.36s (0:02:21) =====================
 ```
-
-==============================================================================
-REGARDING THE DOCKER INCLUDED WITH THIS PROJECT
-
-NOTE: The docker in this repository is not used for development currently, it is a work in progress.
-Currently our devs are making use of the Algorand Sandbox Docker found here
-https://github.com/algorand/sandbox
-
-==============================================================================
-SETUP
-
-Be sure to make a copy of DeveloperConfigExample.json and rename to DeveloperConfig.json and fill in the relevant
-fields.
-Likewise, make a copy of the /test/testConfigExample.json and rename to testConfig.json and fill in the relevant
-fields.
-
-vvvvvvvvvvvvvvvIGNORE THIS BLOCKvvvvvvvvvvvvvvv
-To get started you'll need docker installed
-
-The docker-compose is a work in progress...
-but the DockerFile works
-This project is written using pyteal, the python library used to write smart contracts for the Algorand blockchain
-
-To build run `make build`
-To run container in interactive mode run `make run`
-^^^^^^^^^^^^^^IGNORE THIS BLOCK^^^^^^^^^^^^^^
-
-==============================================================================
-GIT PRACTICES
-
-Developers for this project should follow the practice of a forking workflow, basic link below, you can easily google additional information or ask other devs on the team more info :)
-https://docs.gitlab.com/ee/user/project/repository/forking_workflow.html
-
-==============================================================================
-CODING PRACTICES
-
-For Python we are doing our very best to adhere to the pep-8 standard
-https://www.python.org/dev/peps/pep-0008/
-
-==============================================================================
-Doc Links
-
-[Docker Compose Setup](docs/start_docker_readme.md)
-==============================================================================
