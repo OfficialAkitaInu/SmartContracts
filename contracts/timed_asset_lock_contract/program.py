@@ -14,14 +14,10 @@ def approval_program():
     # Keys for the global data stored by this smart contract.
 
     # AssetID that this smart contract will freeze.
-    # For Nekoin, this is 404044168.
     asset_id_key = Bytes("asset_id")
     # Address of the wallet that will receive the funds in this smart contract when it is closed.
-    # For Nekoin, this is T4DCI74KWWQA437VGK7VO5VAQ2XQE5LUMC2SKY4IQ7P4PRDRXU4KYHDJH4.
-    # We will freeze the creator wallet's 500 million Nekos.
     receiver_address_key = Bytes("receiver_address_key")
     # Timestamp after which this smart contract can be closed.
-    # For Nekoin, this is 1669881600 which is December 1, 2022 00:00:00 PST
     unlock_time_key = Bytes("unlock_time")
 
     # Sends all of the asset specified by assetID to the specified account.
@@ -73,7 +69,7 @@ def approval_program():
             And(
                 # The unlock timestamp must be at some point in the future.
                 Global.latest_timestamp() < on_create_unlock_time,
-                # The transaction sender must be the recipeint of the funds.
+                # The transaction sender must be the recipient of the funds.
                 Txn.sender() == on_create_receiver,
             ),
         ),

@@ -4,13 +4,12 @@ from algosdk import encoding, account, mnemonic
 
 
 from joblib import dump, load
-import time
 import json
 import os
 import base64
 
 
-def getApplicationAddress(app_id):
+def get_application_address(app_id):
     return encoding.encode_address(encoding.checksum(b'appID' + app_id.to_bytes(8, 'big')))
 
 
@@ -94,6 +93,7 @@ def asset_id_from_create_txn(client, txn_id):
     ptx = client.pending_transaction_info(txn_id)
     asset_id = ptx["asset-index"]
     return asset_id
+
 
 def load_developer_config(file_path='DeveloperConfig.json'):
     fp = open(file_path)
@@ -193,7 +193,6 @@ def create_app_signed_txn(private_key,
                                                     global_schema,
                                                     local_schema,
                                                     app_args)
-
     signed_txn = sign_txn(unsigned_txn, private_key)
     return signed_txn, signed_txn.transaction.get_txid()
 
@@ -419,6 +418,7 @@ def payment_signed_txn(sender_private_key,
                                      params,
                                      receiver_public_key,
                                      amount)
+
     else:
         txn = transaction.AssetTransferTxn(sender_public_key,
                                            params,

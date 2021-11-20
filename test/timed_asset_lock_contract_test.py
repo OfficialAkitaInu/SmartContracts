@@ -16,7 +16,7 @@ ESCROW_TIME_LENGTH = int(90)
 
 @pytest.fixture(scope='class')
 def test_config():
-    from testing_utils import load_test_config
+    from .testing_utils import load_test_config
     return load_test_config()
 
 
@@ -31,7 +31,7 @@ def client(test_config):
 @pytest.fixture(scope='class')
 def wallet_1(test_config):
     from akita_inu_asa_utils import generate_new_account
-    from testing_utils import fund_account
+    from .testing_utils import fund_account
     wallet_mnemonic, private_key, public_key = generate_new_account()
 
     wallet_1 = {'mnemonic': wallet_mnemonic, 'public_key': public_key, 'private_key': private_key}
@@ -45,7 +45,7 @@ def wallet_1(test_config):
 @pytest.fixture(scope='class')
 def wallet_2(test_config, asset_id, client):
     from akita_inu_asa_utils import generate_new_account, opt_in_asset_signed_txn
-    from testing_utils import fund_account
+    from .testing_utils import fund_account
     wallet_mnemonic, private_key, public_key = generate_new_account()
     wallet_2 = {'mnemonic': wallet_mnemonic, 'public_key': public_key, 'private_key': private_key}
     fund_account(wallet_2['public_key'], test_config['fund_account_mnemonic'])
@@ -250,7 +250,7 @@ class TestTimedAssetLockContract:
 
     def test_deploy(self, app_id, client, asset_id, wallet_1, wallet_2, end_time):
         from akita_inu_asa_utils import (
-            getApplicationAddress,
+            get_application_address,
             payment_signed_txn,
             wait_for_txn_confirmation
         )
@@ -263,7 +263,7 @@ class TestTimedAssetLockContract:
         assert_state(local_state, global_state, asset_id, public_key, end_time)
 
         # got to fund the contract with algo
-        app_public_key = getApplicationAddress(app_id)
+        app_public_key = get_application_address(app_id)
 
         params = client.suggested_params()
         txn, txn_id = payment_signed_txn(private_key,
@@ -293,7 +293,7 @@ class TestTimedAssetLockContract:
     def test_on_setup(self, app_id, wallet_1, wallet_2, asset_id, client, end_time):
         from akita_inu_asa_utils import (
             wait_for_txn_confirmation,
-            getApplicationAddress,
+            get_application_address,
             payment_signed_txn,
             get_asset_balance
         )
@@ -309,7 +309,7 @@ class TestTimedAssetLockContract:
         assert_state(local_state, global_state, asset_id, public_key, end_time)
 
         # got to fund the app with the asset NUM_TEST_ASSET - 1
-        app_public_key = getApplicationAddress(app_id)
+        app_public_key = get_application_address(app_id)
         assert get_asset_balance(client, public_key, asset_id) == NUM_TEST_ASSET
         assert 0 == get_asset_balance(client, app_public_key, asset_id)
         txn, txn_id = payment_signed_txn(private_key,
@@ -332,7 +332,7 @@ class TestTimedAssetLockContract:
         from akita_inu_asa_utils import (delete_app_signed_txn,
                                          wait_for_txn_confirmation,
                                          get_asset_balance,
-                                         getApplicationAddress)
+                                         get_application_address)
 
         public_key = wallet_1['public_key']
         private_key = wallet_1['private_key']
@@ -348,13 +348,13 @@ class TestTimedAssetLockContract:
 
         assert_state(local_state, global_state, asset_id, public_key, end_time)
         assert get_asset_balance(client, public_key, asset_id) == 1
-        app_public_key = getApplicationAddress(app_id)
+        app_public_key = get_application_address(app_id)
         assert NUM_TEST_ASSET - 1 == get_asset_balance(client, app_public_key, asset_id)
         assert_adversary_actions(app_id, wallet_2, client, asset_id)
         assert_adversary_actions(app_id, wallet_1, client, asset_id, False)
 
     def test_on_delete_on_time(self, app_id, wallet_1, wallet_2, client, end_time, asset_id):
-        from akita_inu_asa_utils import (getApplicationAddress,
+        from akita_inu_asa_utils import (get_application_address,
                                          get_asset_balance)
 
         sleep_time = (end_time + 10) - int(time.time())
@@ -384,5 +384,5 @@ class TestTimedAssetLockContract:
 
         # check that balance had returned to the rightful owner
         assert get_asset_balance(client, public_key, asset_id) == NUM_TEST_ASSET
-        app_public_key = getApplicationAddress(app_id)
+        app_public_key = get_application_address(app_id)
         assert 0 == get_asset_balance(client, app_public_key, asset_id)
