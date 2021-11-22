@@ -58,10 +58,9 @@ def approval_program():
         )
 
     @Subroutine(TealType.uint64)
-    def assert4Group() -> Expr:
-        return And(Global.group_size() == Int(4),
-                   Gtxn[1].on_completion() == OnComplete.OptIn,
-                   Gtxn[3].on_completion() == OnComplete.NoOp)
+    def assert3Group() -> Expr:
+        return And(Global.group_size() == Int(3),
+                   Gtxn[1].on_completion() == OnComplete.OptIn)
 
     @Subroutine(TealType.uint64)
     def assert1Group() -> Expr:
@@ -94,21 +93,6 @@ def approval_program():
         Assert(
             # Only the original creator and receiver can opt into this smart contract.
             Gtxn[1].sender() == App.globalGet(receiver_address_key),
-        ),
-        Approve(),
-    )
-
-    # OnSetup handles setting up this freeze smart contract. Namely, it tells this smart
-    # contract to opt into the asset it was created to hold. This smart contract must
-    # hold enough Algo's to make this transaction.
-    on_setup = Seq(
-        Assert(
-            And(
-                # The wallet triggering the setup must be the original creator and receiver.
-                Gtxn[2].sender() == App.globalGet(receiver_address_key),
-                # Sender must be opted in
-                App.optedIn(Gtxn[2].sender(), App.id()),
-            )
         ),
         InnerTxnBuilder.Begin(),
         InnerTxnBuilder.SetFields(
@@ -154,7 +138,7 @@ def approval_program():
                 # This smart contract cannot be updated.
                 Txn.on_completion() == OnComplete.UpdateApplication,
                 # This smart contract cannot be cleared of local state
-                Txn.on_completion() == OnComplete.ClearState
+                Txn.on_completion() == OnComplete.ClearState,
             ),
             Reject(),
         ],
@@ -163,9 +147,8 @@ def approval_program():
         [And(assert1Group(), Txn.application_id() == Int(0)), on_create],
         [And(assert1Group(), Txn.on_completion() == OnComplete.DeleteApplication), on_delete],
 
-        # four transaction
-        [And(assert4Group(), Gtxn[Txn.group_index()].on_completion() == OnComplete.OptIn), on_opt_in],
-        [And(assert4Group(), Txn.on_completion() == OnComplete.NoOp), on_setup],
+        # three transaction
+        [And(assert3Group(), Gtxn[Txn.group_index()].on_completion() == OnComplete.OptIn), on_opt_in],
     )
 
     return compileTeal(program, Mode.Application, version=5)
