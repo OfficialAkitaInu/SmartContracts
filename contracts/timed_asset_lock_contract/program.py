@@ -76,7 +76,6 @@ def approval_program():
     on_create = Seq(
         Assert(
             And(
-                # The unlock timestamp must be at some point in the future.
                 # The transaction sender must be the recipient of the funds.
                 Txn.sender() == on_create_receiver,
             ),
@@ -91,7 +90,7 @@ def approval_program():
     # wallet receiving (and sending) the funds can opt into this smart contract.
     on_opt_in = Seq(
         Assert(
-            # Only the original creator and receiver can opt into this smart contract.
+            # Only the original creator/receiver can opt into this smart contract.
             Gtxn[1].sender() == App.globalGet(receiver_address_key),
         ),
         InnerTxnBuilder.Begin(),

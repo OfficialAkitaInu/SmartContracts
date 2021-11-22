@@ -205,8 +205,6 @@ class TestTimedAssetLockContract:
         assert_adversary_actions(app_id, wallet_2, client, asset_id)
         local_state = read_local_state(client, public_key, app_id)
         global_state = read_global_state(client, public_key, app_id)
-        print(local_state)
-        print(global_state)
         assert_state(local_state, global_state, asset_id, public_key, end_time)
         # got to fund the contract with algo
 
