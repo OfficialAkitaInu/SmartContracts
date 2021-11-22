@@ -57,6 +57,16 @@ def approval_program():
             )
         )
 
+    @Subroutine(TealType.uint64)
+    def assert4Group() -> Expr:
+        return And(Global.group_size() == Int(4),
+                   Gtxn[1].on_completion() == OnComplete.OptIn,
+                   Gtxn[3].on_completion() == OnComplete.NoOp)
+
+    @Subroutine(TealType.uint64)
+    def assert1Group() -> Expr:
+        return Or(Global.group_size() == Int(1))
+
     # OnCreate handles creating this freeze smart contract.
     # arg[0]: the assetID of the asset we want to freeze. For Akita Inu ASA it is 384303832
     # arg[1]: the recipient of the assets held in this smart contract. Must be the creator.
@@ -68,7 +78,6 @@ def approval_program():
         Assert(
             And(
                 # The unlock timestamp must be at some point in the future.
-                Global.latest_timestamp() < on_create_unlock_time,
                 # The transaction sender must be the recipient of the funds.
                 Txn.sender() == on_create_receiver,
             ),
@@ -79,6 +88,16 @@ def approval_program():
         Approve(),
     )
 
+    # OnOptIn handles when a wallet request to opt into this smart contract. Only the
+    # wallet receiving (and sending) the funds can opt into this smart contract.
+    on_opt_in = Seq(
+        Assert(
+            # Only the original creator and receiver can opt into this smart contract.
+            Gtxn[1].sender() == App.globalGet(receiver_address_key),
+        ),
+        Approve(),
+    )
+
     # OnSetup handles setting up this freeze smart contract. Namely, it tells this smart
     # contract to opt into the asset it was created to hold. This smart contract must
     # hold enough Algo's to make this transaction.
@@ -86,11 +105,9 @@ def approval_program():
         Assert(
             And(
                 # The wallet triggering the setup must be the original creator and receiver.
-                Txn.sender() == App.globalGet(receiver_address_key),
+                Gtxn[2].sender() == App.globalGet(receiver_address_key),
                 # Sender must be opted in
-                App.optedIn(Txn.sender(), App.id()),
-                # This smart contract must be set up before the unlock timestamp.
-                Global.latest_timestamp() < App.globalGet(unlock_time_key),
+                App.optedIn(Gtxn[2].sender(), App.id()),
             )
         ),
         InnerTxnBuilder.Begin(),
@@ -103,16 +120,6 @@ def approval_program():
             }
         ),
         InnerTxnBuilder.Submit(),
-        Approve(),
-    )
-
-    # OnOptIn handles when a wallet request to opt into this smart contract. Only the
-    # wallet receiving (and sending) the funds can opt into this smart contract.
-    on_opt_in = Seq(
-        Assert(
-            # Only the original creator and receiver can opt into this smart contract.
-            Txn.sender() == App.globalGet(receiver_address_key),
-        ),
         Approve(),
     )
 
@@ -140,10 +147,6 @@ def approval_program():
 
     # Application router for this smart contract.
     program = Cond(
-        [Txn.application_id() == Int(0), on_create],
-        [Txn.on_completion() == OnComplete.NoOp, on_setup],
-        [Txn.on_completion() == OnComplete.OptIn, on_opt_in],
-        [Txn.on_completion() == OnComplete.DeleteApplication, on_delete],
         [
             Or(
                 # This smart contract cannot be closed out.
@@ -155,6 +158,14 @@ def approval_program():
             ),
             Reject(),
         ],
+
+        # single transactions
+        [And(assert1Group(), Txn.application_id() == Int(0)), on_create],
+        [And(assert1Group(), Txn.on_completion() == OnComplete.DeleteApplication), on_delete],
+
+        # four transaction
+        [And(assert4Group(), Gtxn[Txn.group_index()].on_completion() == OnComplete.OptIn), on_opt_in],
+        [And(assert4Group(), Txn.on_completion() == OnComplete.NoOp), on_setup],
     )
 
     return compileTeal(program, Mode.Application, version=5)

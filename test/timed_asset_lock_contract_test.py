@@ -209,31 +209,40 @@ def opt_out(wallet, app_id, asset_ids, client):
     wait_for_txn_confirmation(client, txn_id, 5)
 
 
-def opt_in(wallet, app_id, asset_ids, client):
-    from akita_inu_asa_utils import opt_in_app_signed_txn
+def opt_in(public_key, private_key, params, app_public_key, app_id,asset_id, client):
+    send_4_group(public_key, private_key, app_public_key, app_id, 0, 0, asset_id, client)
 
+
+def send_4_group(public_key, private_key, app_public_key, app_id, numAlgos, numAsset, asset_id, client):
+    from algosdk.future import transaction
     params = client.suggested_params()
+    txn0 = transaction.PaymentTxn(public_key,
+                                  params,
+                                  app_public_key,
+                                  numAlgos)
+    txn1 = transaction.ApplicationOptInTxn(public_key,
+                                           params,
+                                           app_id,
+                                           foreign_assets=[asset_id])
+    txn2 = transaction.ApplicationNoOpTxn(public_key,
+                                          params,
+                                          app_id,
+                                          foreign_assets=[asset_id])
 
-    txn, txn_id = opt_in_app_signed_txn(wallet['private_key'],
-                                        wallet['public_key'],
+    txn3 = transaction.AssetTransferTxn(public_key,
                                         params,
-                                        app_id,
-                                        foreign_assets=asset_ids)
-    client.send_transactions([txn])
+                                        app_public_key,
+                                        numAsset,
+                                        asset_id)
+
+    grouped = transaction.assign_group_id([txn0, txn1, txn2, txn3])
+    grouped = [grouped[0].sign(private_key),
+               grouped[1].sign(private_key),
+               grouped[2].sign(private_key),
+               grouped[3].sign(private_key)]
+
+    txn_id = client.send_transactions(grouped)
     wait_for_txn_confirmation(client, txn_id, 5)
-
-
-def set_up(wallet, app_id, asset_ids, client):
-    from akita_inu_asa_utils import noop_app_signed_txn
-    params = client.suggested_params()
-    txn, txn_id = noop_app_signed_txn(wallet['private_key'],
-                                      wallet['public_key'],
-                                      params,
-                                      app_id,
-                                      asset_ids)
-    client.send_transactions([txn])
-    wait_for_txn_confirmation(client, txn_id, 5)
-
 
 class TestTimedAssetLockContract:
     def test_build(self, client):
@@ -249,11 +258,6 @@ class TestTimedAssetLockContract:
         assert os.path.exists('./build/globalSchema')
 
     def test_deploy(self, app_id, client, asset_id, wallet_1, wallet_2, end_time):
-        from akita_inu_asa_utils import (
-            get_application_address,
-            payment_signed_txn,
-            wait_for_txn_confirmation
-        )
         assert app_id
         public_key = wallet_1['public_key']
         private_key = wallet_1['private_key']
@@ -262,69 +266,17 @@ class TestTimedAssetLockContract:
         global_state = read_global_state(client, public_key, app_id)
         assert_state(local_state, global_state, asset_id, public_key, end_time)
 
+    def test_4_group(self, client, app_id, wallet_1, asset_id):
+        from akita_inu_asa_utils import (get_application_address, get_asset_balance)
+        from algosdk.future import transaction
+
         # got to fund the contract with algo
         app_public_key = get_application_address(app_id)
-
-        params = client.suggested_params()
-        txn, txn_id = payment_signed_txn(private_key,
-                                         public_key,
-                                         app_public_key, 300000, params)
-        client.send_transactions([txn])
-        wait_for_txn_confirmation(client, txn_id, 5)
-        assert_adversary_actions(app_id, wallet_2, client, asset_id)
-
-        # users fail clearing apps they are not opted in to
-        assert_adversary_actions(app_id, wallet_1, client, asset_id, False, fail_clear=True)
-
-    def test_on_opt_in(self, app_id, wallet_1, wallet_2, client, asset_id, end_time):
-        # try to set up before opting in
-        with pytest.raises(AlgodHTTPError):
-            set_up(wallet_1, app_id, [asset_id], client)
-
-        public_key = wallet_1['public_key']
-        opt_in(wallet_1, app_id, [asset_id], client)
-
-        local_state = read_local_state(client, public_key, app_id)
-        global_state = read_global_state(client, public_key, app_id)
-        assert_state(local_state, global_state, asset_id, public_key, end_time)
-        assert_adversary_actions(app_id, wallet_2, client, asset_id)
-        assert_adversary_actions(app_id, wallet_1, client, asset_id, False)
-
-    def test_on_setup(self, app_id, wallet_1, wallet_2, asset_id, client, end_time):
-        from akita_inu_asa_utils import (
-            wait_for_txn_confirmation,
-            get_application_address,
-            payment_signed_txn,
-            get_asset_balance
-        )
-        params = client.suggested_params()
-
-        set_up(wallet_1, app_id, [asset_id], client)
-
-        public_key = wallet_1['public_key']
         private_key = wallet_1['private_key']
-        local_state = read_local_state(client, public_key, app_id)
-
-        global_state = read_global_state(client, public_key, app_id)
-        assert_state(local_state, global_state, asset_id, public_key, end_time)
-
-        # got to fund the app with the asset NUM_TEST_ASSET - 1
-        app_public_key = get_application_address(app_id)
-        assert get_asset_balance(client, public_key, asset_id) == NUM_TEST_ASSET
-        assert 0 == get_asset_balance(client, app_public_key, asset_id)
-        txn, txn_id = payment_signed_txn(private_key,
-                                         public_key,
-                                         app_public_key,
-                                         NUM_TEST_ASSET - 1,
-                                         params,
-                                         asset_id=asset_id)
-        client.send_transactions([txn])
-        wait_for_txn_confirmation(client, txn_id, 5)
-
-        assert get_asset_balance(client, public_key, asset_id) == 1
-        assert NUM_TEST_ASSET - 1 == get_asset_balance(client, app_public_key, asset_id)
-        assert_adversary_actions(app_id, wallet_2, client, asset_id)
-        assert_adversary_actions(app_id, wallet_1, client, asset_id, False)
+        public_key = wallet_1['public_key']
+        send_4_group(public_key, private_key, app_public_key, app_id, int(1e6 * 0.3), NUM_TEST_ASSET - 1,
+                     asset_id, client)
+        assert get_asset_balance(client, app_public_key, asset_id) == NUM_TEST_ASSET - 1
 
 # WARNING DELETE TESTS DO NOT WORK IF YOUR RUNNING SANDBOX IN DEV MODE DUE TO TIMESTAMPING IN DEV MODE
     def test_on_delete_too_soon(self, app_id, wallet_1, wallet_2, client, asset_id, end_time):
@@ -350,8 +302,6 @@ class TestTimedAssetLockContract:
         assert get_asset_balance(client, public_key, asset_id) == 1
         app_public_key = get_application_address(app_id)
         assert NUM_TEST_ASSET - 1 == get_asset_balance(client, app_public_key, asset_id)
-        assert_adversary_actions(app_id, wallet_2, client, asset_id)
-        assert_adversary_actions(app_id, wallet_1, client, asset_id, False)
 
     def test_on_delete_on_time(self, app_id, wallet_1, wallet_2, client, end_time, asset_id):
         from akita_inu_asa_utils import (get_application_address,
@@ -372,9 +322,9 @@ class TestTimedAssetLockContract:
         opt_out(wallet_1, app_id, [asset_id], client)
         with pytest.raises(AlgodHTTPError):
             cash_out(client, public_key, private_key, app_id, [asset_id])
-
+        
         # opt back in so you can fully cash out
-        opt_in(wallet_1, app_id, [asset_id], client)
+        opt_in(public_key,private_key, client.suggested_params(), get_application_address(app_id), app_id, asset_id, client)
 
         cash_out(client, public_key, private_key, app_id, [asset_id])
         local_state = read_local_state(client, public_key, app_id)
