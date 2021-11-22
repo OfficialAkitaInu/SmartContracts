@@ -112,78 +112,13 @@ def assert_state(local_state, global_state, asset_id, receiver_address, unlock_t
             assert global_state[i]['value']['uint'] == expected_vars[key]
 
 
-def assert_adversary_actions(app_id, wallet, client, asset_id, adversary_wallet=True, fail_clear=False):
-    from pyteal import compileTeal, Approve, Mode
-    from akita_inu_asa_utils import (opt_in_app_signed_txn,
-                                     noop_app_signed_txn,
-                                     delete_app_signed_txn,
-                                     update_app_signed_txn,
-                                     close_out_app_signed_txn,
-                                     clear_state_out_app_signed_txn,
-                                     compile_program)
-    params = client.suggested_params()
+def assert_adversary_actions(app_id, wallet, client, asset_id,):
+    from akita_inu_asa_utils import get_application_address
     public_key = wallet['public_key']
     private_key = wallet['private_key']
-    if adversary_wallet:
-        # try to opt in as advesary
-        txn, txn_id = opt_in_app_signed_txn(private_key,
-                                            public_key,
-                                            params,
-                                            app_id,
-                                            foreign_assets=[asset_id])
-        with pytest.raises(AlgodHTTPError):
-            client.send_transactions([txn])
-            wait_for_txn_confirmation(client, txn_id, 5)
 
-        # attempt to call application (on_setup function)
-        txn, txn_id = noop_app_signed_txn(private_key, public_key, params, app_id, [asset_id])
-        with pytest.raises(AlgodHTTPError):
-            client.send_transactions([txn])
-            wait_for_txn_confirmation(client, txn_id, 5)
-
-
-    # attempt to delete application
-    txn, txn_id = delete_app_signed_txn(private_key, public_key, params, app_id, [asset_id])
     with pytest.raises(AlgodHTTPError):
-        client.send_transactions([txn])
-        wait_for_txn_confirmation(client, txn_id, 5)
-
-    # attempt to update the program
-    new_approval_program = compileTeal(Approve(), Mode.Application, version=5)
-    new_clear_program = compileTeal(Approve(), Mode.Application, version=5)
-
-    new_approval_program = compile_program(client, new_approval_program)
-    new_clear_program = compile_program(client, new_clear_program)
-    txn, txn_id = update_app_signed_txn(private_key,
-                                        public_key,
-                                        params,
-                                        app_id,
-                                        new_approval_program,
-                                        new_clear_program)
-    with pytest.raises(AlgodHTTPError):
-        client.send_transactions([txn])
-        wait_for_txn_confirmation(client, txn_id, 5)
-
-    # attempt to close out application
-    txn, txn_id = close_out_app_signed_txn(private_key,
-                                           public_key,
-                                           params,
-                                           app_id,
-                                           [asset_id])
-    with pytest.raises(AlgodHTTPError):
-        client.send_transactions([txn])
-        wait_for_txn_confirmation(client, txn_id, 5)
-
-    # attempt to clear application state
-    txn, txn_id = clear_state_out_app_signed_txn(private_key,
-                                                 public_key,
-                                                 params,
-                                                 app_id,
-                                                 [asset_id])
-    if adversary_wallet or fail_clear:
-        with pytest.raises(AlgodHTTPError):
-            client.send_transactions([txn])
-            wait_for_txn_confirmation(client, txn_id, 5)
+        send_3_group(public_key, private_key, get_application_address(app_id), app_id, 100000, 100000, asset_id, client)
 
 
 def cash_out(client, public_key, private_key, app_id, asset_ids):
@@ -210,10 +145,10 @@ def opt_out(wallet, app_id, asset_ids, client):
 
 
 def opt_in(public_key, private_key, params, app_public_key, app_id,asset_id, client):
-    send_4_group(public_key, private_key, app_public_key, app_id, 0, 0, asset_id, client)
+    send_3_group(public_key, private_key, app_public_key, app_id, 0, 0, asset_id, client)
 
 
-def send_4_group(public_key, private_key, app_public_key, app_id, numAlgos, numAsset, asset_id, client):
+def send_3_group(public_key, private_key, app_public_key, app_id, numAlgos, numAsset, asset_id, client):
     from algosdk.future import transaction
     params = client.suggested_params()
     txn0 = transaction.PaymentTxn(public_key,
@@ -224,22 +159,17 @@ def send_4_group(public_key, private_key, app_public_key, app_id, numAlgos, numA
                                            params,
                                            app_id,
                                            foreign_assets=[asset_id])
-    txn2 = transaction.ApplicationNoOpTxn(public_key,
-                                          params,
-                                          app_id,
-                                          foreign_assets=[asset_id])
 
-    txn3 = transaction.AssetTransferTxn(public_key,
+    txn2 = transaction.AssetTransferTxn(public_key,
                                         params,
                                         app_public_key,
                                         numAsset,
                                         asset_id)
 
-    grouped = transaction.assign_group_id([txn0, txn1, txn2, txn3])
+    grouped = transaction.assign_group_id([txn0, txn1, txn2])
     grouped = [grouped[0].sign(private_key),
                grouped[1].sign(private_key),
-               grouped[2].sign(private_key),
-               grouped[3].sign(private_key)]
+               grouped[2].sign(private_key)]
 
     txn_id = client.send_transactions(grouped)
     wait_for_txn_confirmation(client, txn_id, 5)
@@ -260,23 +190,34 @@ class TestTimedAssetLockContract:
     def test_deploy(self, app_id, client, asset_id, wallet_1, wallet_2, end_time):
         assert app_id
         public_key = wallet_1['public_key']
-        private_key = wallet_1['private_key']
 
         local_state = read_local_state(client, public_key, app_id)
         global_state = read_global_state(client, public_key, app_id)
         assert_state(local_state, global_state, asset_id, public_key, end_time)
 
-    def test_4_group(self, client, app_id, wallet_1, asset_id):
+    def test_3_group(self, client, app_id, wallet_1, wallet_2, asset_id, end_time):
         from akita_inu_asa_utils import (get_application_address, get_asset_balance)
-        from algosdk.future import transaction
 
-        # got to fund the contract with algo
-        app_public_key = get_application_address(app_id)
         private_key = wallet_1['private_key']
         public_key = wallet_1['public_key']
-        send_4_group(public_key, private_key, app_public_key, app_id, int(1e6 * 0.3), NUM_TEST_ASSET - 1,
+
+        app_public_key = get_application_address(app_id)
+        assert_adversary_actions(app_id, wallet_2, client, asset_id)
+        local_state = read_local_state(client, public_key, app_id)
+        global_state = read_global_state(client, public_key, app_id)
+        print(local_state)
+        print(global_state)
+        assert_state(local_state, global_state, asset_id, public_key, end_time)
+        # got to fund the contract with algo
+
+        send_3_group(public_key, private_key, app_public_key, app_id, int(1e6 * 0.3), NUM_TEST_ASSET - 1,
                      asset_id, client)
         assert get_asset_balance(client, app_public_key, asset_id) == NUM_TEST_ASSET - 1
+
+        assert_adversary_actions(app_id, wallet_2, client, asset_id)
+        local_state = read_local_state(client, public_key, app_id)
+        global_state = read_global_state(client, public_key, app_id)
+        assert_state(local_state, global_state, asset_id, public_key, end_time)
 
 # WARNING DELETE TESTS DO NOT WORK IF YOUR RUNNING SANDBOX IN DEV MODE DUE TO TIMESTAMPING IN DEV MODE
     def test_on_delete_too_soon(self, app_id, wallet_1, wallet_2, client, asset_id, end_time):
