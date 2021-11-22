@@ -79,6 +79,16 @@ def approval_program():
         Approve(),
     )
 
+    # OnOptIn handles when a wallet request to opt into this smart contract. Only the
+    # wallet receiving (and sending) the funds can opt into this smart contract.
+    on_opt_in = Seq(
+        Assert(
+            # Only the original creator and receiver can opt into this smart contract.
+            Txn.sender() == App.globalGet(receiver_address_key),
+        ),
+        Approve(),
+    )
+
     # OnSetup handles setting up this freeze smart contract. Namely, it tells this smart
     # contract to opt into the asset it was created to hold. This smart contract must
     # hold enough Algo's to make this transaction.
@@ -89,8 +99,6 @@ def approval_program():
                 Txn.sender() == App.globalGet(receiver_address_key),
                 # Sender must be opted in
                 App.optedIn(Txn.sender(), App.id()),
-                # This smart contract must be set up before the unlock timestamp.
-                Global.latest_timestamp() < App.globalGet(unlock_time_key),
             )
         ),
         InnerTxnBuilder.Begin(),
@@ -103,16 +111,6 @@ def approval_program():
             }
         ),
         InnerTxnBuilder.Submit(),
-        Approve(),
-    )
-
-    # OnOptIn handles when a wallet request to opt into this smart contract. Only the
-    # wallet receiving (and sending) the funds can opt into this smart contract.
-    on_opt_in = Seq(
-        Assert(
-            # Only the original creator and receiver can opt into this smart contract.
-            Txn.sender() == App.globalGet(receiver_address_key),
-        ),
         Approve(),
     )
 
