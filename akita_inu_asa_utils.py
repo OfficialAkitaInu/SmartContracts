@@ -429,22 +429,3 @@ def payment_signed_txn(sender_private_key,
     signed_txn = sign_txn(txn, sender_private_key)
     return signed_txn, signed_txn.transaction.get_txid()
 
-
-def create_logic_sig_signed_transaction(sender_private_key,
-                                        teal_source,
-                                        payment_transaction):
-    """
-            Creates and signs an "logic signature" transaction to an application, this works with algo or asa
-                Args:
-                    sender_private_key (str): private key of sender
-                    teal_source (str): teal source code
-                    payment_transaction (str):
-                Returns:
-                    tuple: Tuple containing the signed transaction and signed transaction id
-    """
-
-    compiled_binary = compile_program(teal_source)
-    logic_sig = transaction.LogicSig(compiled_binary)
-    txn = transaction.LogicSigTransaction(payment_transaction, logic_sig)
-    signed_txn = sign_txn(txn, sender_private_key)
-    return signed_txn, signed_txn.transaction.get_txid()
