@@ -61,8 +61,10 @@ def approval_program():
     def assert3Group() -> Expr:
         return And(Global.group_size() == Int(3),
                    Gtxn[0].type_enum() == TxnType.Payment,
+                   Gtxn[0].receiver() == Global.current_application_address(),
                    Gtxn[1].on_completion() == OnComplete.OptIn,
-                   Gtxn[2].type_enum() == TxnType.AssetTransfer,)
+                   Gtxn[2].type_enum() == TxnType.AssetTransfer,
+                   Gtxn[2].asset_receiver() == Global.current_application_address(),)
 
     @Subroutine(TealType.uint64)
     def assert1Group() -> Expr:
@@ -136,7 +138,9 @@ def approval_program():
     program = Cond(
         [
             Or(
+                # Your fees shouldn't exceed an unreasonable amount
                 Txn.fee() > Int(5000),
+                # No rekeys allowed (just to be safe)
                 Txn.rekey_to() != Global.zero_address(),
                 # This smart contract cannot be closed out.
                 Txn.on_completion() == OnComplete.CloseOut,
