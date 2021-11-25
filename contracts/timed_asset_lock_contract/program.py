@@ -60,11 +60,15 @@ def approval_program():
     @Subroutine(TealType.uint64)
     def assert3Group() -> Expr:
         return And(Global.group_size() == Int(3),
-                   Gtxn[1].on_completion() == OnComplete.OptIn)
+                   Gtxn[0].type_enum() == TxnType.Payment,
+                   Gtxn[1].on_completion() == OnComplete.OptIn,
+                   Gtxn[2].type_enum() == TxnType.AssetTransfer,)
 
     @Subroutine(TealType.uint64)
     def assert1Group() -> Expr:
-        return Or(Global.group_size() == Int(1))
+        return And(Global.group_size() == Int(1),
+                   Or(Txn.application_id() == Int(0),
+                      Txn.on_completion() == OnComplete.DeleteApplication,))
 
     # OnCreate handles creating this freeze smart contract.
     # arg[0]: the assetID of the asset we want to freeze. For Akita Inu ASA it is 384303832
@@ -132,6 +136,8 @@ def approval_program():
     program = Cond(
         [
             Or(
+                Txn.fee() > Int(5000),
+                Txn.rekey_to() != Global.zero_address(),
                 # This smart contract cannot be closed out.
                 Txn.on_completion() == OnComplete.CloseOut,
                 # This smart contract cannot be updated.
@@ -147,7 +153,7 @@ def approval_program():
         [And(assert1Group(), Txn.on_completion() == OnComplete.DeleteApplication), on_delete],
 
         # three transaction
-        [And(assert3Group(), Gtxn[Txn.group_index()].on_completion() == OnComplete.OptIn), on_opt_in],
+        [assert3Group(), on_opt_in],
     )
 
     return compileTeal(program, Mode.Application, version=5)

@@ -174,6 +174,33 @@ def send_3_group(public_key, private_key, app_public_key, app_id, numAlgos, numA
     txn_id = client.send_transactions(grouped)
     wait_for_txn_confirmation(client, txn_id, 5)
 
+
+def send_3_group_out_of_order(public_key, private_key, app_public_key, app_id, numAlgos, numAsset, asset_id, client):
+    from algosdk.future import transaction
+    params = client.suggested_params()
+    txn2 = transaction.PaymentTxn(public_key,
+                                  params,
+                                  app_public_key,
+                                  numAlgos)
+    txn0 = transaction.ApplicationOptInTxn(public_key,
+                                           params,
+                                           app_id,
+                                           foreign_assets=[asset_id])
+
+    txn1 = transaction.AssetTransferTxn(public_key,
+                                        params,
+                                        app_public_key,
+                                        numAsset,
+                                        asset_id)
+
+    grouped = transaction.assign_group_id([txn0, txn1, txn2])
+    grouped = [grouped[0].sign(private_key),
+               grouped[1].sign(private_key),
+               grouped[2].sign(private_key)]
+
+    txn_id = client.send_transactions(grouped)
+    wait_for_txn_confirmation(client, txn_id, 5)
+
 class TestTimedAssetLockContract:
     def test_build(self, client):
         from contracts.timed_asset_lock_contract.program import compile_app
@@ -191,6 +218,29 @@ class TestTimedAssetLockContract:
         assert app_id
         public_key = wallet_1['public_key']
 
+        local_state = read_local_state(client, public_key, app_id)
+        global_state = read_global_state(client, public_key, app_id)
+        assert_state(local_state, global_state, asset_id, public_key, end_time)
+
+    def test_3_group_out_of_order(self, client, app_id, wallet_1, wallet_2, asset_id, end_time):
+        from akita_inu_asa_utils import (get_application_address, get_asset_balance)
+
+        private_key = wallet_1['private_key']
+        public_key = wallet_1['public_key']
+
+        app_public_key = get_application_address(app_id)
+        assert_adversary_actions(app_id, wallet_2, client, asset_id)
+        local_state = read_local_state(client, public_key, app_id)
+        global_state = read_global_state(client, public_key, app_id)
+        assert_state(local_state, global_state, asset_id, public_key, end_time)
+        # got to fund the contract with algo
+
+        with pytest.raises(AlgodHTTPError):
+            send_3_group_out_of_order(public_key, private_key, app_public_key, app_id, int(1e6 * 0.3), NUM_TEST_ASSET - 1,
+                         asset_id, client)
+        assert get_asset_balance(client, public_key, asset_id) == NUM_TEST_ASSET
+
+        assert_adversary_actions(app_id, wallet_2, client, asset_id)
         local_state = read_local_state(client, public_key, app_id)
         global_state = read_global_state(client, public_key, app_id)
         assert_state(local_state, global_state, asset_id, public_key, end_time)
