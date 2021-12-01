@@ -51,7 +51,9 @@ def wallet_2(test_config, asset_id, client):
     fund_account(wallet_2['public_key'], test_config['fund_account_mnemonic'])
 
     params = client.suggested_params()
-    opt_in_asset_signed_txn(private_key, public_key, params, asset_id)
+    txn, txn_id = opt_in_asset_signed_txn(private_key, public_key, params, asset_id)
+    client.send_transactions([txn])
+    wait_for_txn_confirmation(client, txn_id, 5)
     return wallet_2
 
 
