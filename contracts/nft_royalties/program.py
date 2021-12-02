@@ -6,29 +6,12 @@ def escrow_approval():
     # At the moment this is deferring to the contract whose app ID is provided
     # for all logic, it might be a good idea to add extra precautions and
     # requirements into this contract directly
-
-    # Create the logic app, this escrow, and the logicsig together
-    logic_app_id = Bytes("logic_app_id")
-    on_create = Seq(
-        Assert(
-            And(
-                Global.group_size() == Int(2),
-                Txn.group_index() == Int(1),
-
-                Gtxn[0].type_enum() == TxnType.ApplicationCall,
-                Gtxn[0].application_id() == Int(0),
-            ),
-        ),
-        App.globalPut(logic_app_id, GeneratedID(0)),
-        Approve()
-    )
-    
     on_call = Seq(
         Assert(
             And(
                 Txn.fee() == Int(0),
                 Gtxn[0].type_enum() == TxnType.ApplicationCall,
-                Gtxn[0].application_id() == App.globalGet(logic_app_id),
+                Gtxn[0].application_id() == Int(20),
             ),
         ),
         Approve(),
@@ -40,7 +23,6 @@ def escrow_approval():
     )
 
     program = Cond(
-        [Txn.application_id() == Int(0), on_create],
         [Txn.on_completion() == OnComplete.NoOp, on_call],
         [Txn.on_completion() == OnComplete.DeleteApplication, on_delete],
         [Int(1), Reject()]
@@ -49,19 +31,6 @@ def escrow_approval():
 
 
 def transfer_approval(royalties_account):
-    on_create = Seq(
-        Assert(
-            And(
-                Global.group_size() == Int(2),
-                Txn.group_index() == Int(0),
-
-                Gtxn[1].type_enum() == TxnType.ApplicationCall,
-                Gtxn[1].application_id() == Int(0),
-            )
-        ),
-        Approve()
-    )
-
     # Gtxn[0]
     #     * This call
     #     * Fee should be 0, paid by either party in transfer
@@ -97,8 +66,6 @@ def transfer_approval(royalties_account):
                 Gtxn[2].type_enum() == TxnType.Payment,
                 Gtxn[3].type_enum() == TxnType.Payment,
 
-                Txn.fee() == Int(0),
-
                 Gtxn[1].fee() == Int(0),
                 # Since this is for NFTs, it should be transferring the one
                 # and only asset in full
@@ -109,11 +76,11 @@ def transfer_approval(royalties_account):
                 manager.value() == Global.zero_address(),
                 freeze.value() == Global.zero_address(),
 
-                Gtxn[2].sender() == Gtxn[1].receiver(),
-                Gtxn[1].sender() == Gtxn[2].receiver(),
+                Gtxn[2].sender() == Gtxn[1].asset_receiver(),
+                Gtxn[1].asset_sender() == Gtxn[2].receiver(),
 
                 Or(
-                    Gtxn[3].sender() == Gtxn[1].sender(),
+                    Gtxn[3].sender() == Gtxn[1].asset_sender(),
                     Gtxn[3].sender() == Gtxn[2].sender(),
                 ),
                 Gtxn[3].receiver() == Addr(royalties_account),
@@ -126,7 +93,7 @@ def transfer_approval(royalties_account):
     )
 
     program = Cond(
-        [Txn.application_id() == Int(0), on_create],
+        [Txn.application_id() == Int(0), Approve()],
         [Txn.on_completion() == OnComplete.NoOp, on_call],
         [Int(1), Reject()]
     )
@@ -141,9 +108,6 @@ def logicsig_approval(multisig, addresses, ratio_terms):
 
     ratio_sum = sum(ratio_terms)
 
-    def static_for_each(xs, f, wrap=Seq):
-        return [f(x) for x in xs]
-
     indices = range(len(addresses))
 
     num_parties = Int(len(addresses))
@@ -155,16 +119,15 @@ def logicsig_approval(multisig, addresses, ratio_terms):
         total_paid_out.load() > Int(0),
 
         # Generate checks for every party in the contract
-        And(*static_for_each(
-            indices,
-            lambda i:
-                And(
-                    Gtxn[i].type_enum() == TxnType.Payment,
-                    Gtxn[i].sender() == Addr(multisig),
-                    Gtxn[i].receiver() == Addr(addresses[i]),
-                    Gtxn[i].amount() == total_paid_out.load() * Int(ratio_terms[i]) / Int(ratio_sum),
-                ),
-        ))
+        And(*[
+            And(
+                Gtxn[i].type_enum() == TxnType.Payment,
+                Gtxn[i].sender() == Addr(multisig),
+                Gtxn[i].receiver() == Addr(addresses[i]),
+                Gtxn[i].amount() == total_paid_out.load() * Int(ratio_terms[i]) / Int(ratio_sum),
+            )
+            for i in indices
+        ])
     )
     
     program = Seq(
