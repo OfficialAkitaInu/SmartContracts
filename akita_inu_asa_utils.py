@@ -9,6 +9,10 @@ import os
 import base64
 
 
+def zero_address():
+    return encoding.encode_address(bytes(32))
+
+
 def get_application_address(app_id):
     return encoding.encode_address(encoding.checksum(b'appID' + app_id.to_bytes(8, 'big')))
 
@@ -51,6 +55,7 @@ def compile_program(client, source_code, file_path=None):
     else:
         check_build_dir()
         dump(base64.b64decode(compile_response['result']), 'build/' + file_path)
+    return compile_response["hash"]
 
 
 # read user local state
