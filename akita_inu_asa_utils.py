@@ -175,7 +175,8 @@ def create_app_signed_txn(private_key,
                           clear_program,
                           global_schema,
                           local_schema,
-                          app_args):
+                          app_args,
+                          **kwargs):
     """
         Creates an signed "create app" transaction to an application
             Args:
@@ -197,7 +198,8 @@ def create_app_signed_txn(private_key,
                                                     clear_program,
                                                     global_schema,
                                                     local_schema,
-                                                    app_args)
+                                                    app_args,
+                                                    **kwargs)
     signed_txn = sign_txn(unsigned_txn, private_key)
     return signed_txn, signed_txn.transaction.get_txid()
 

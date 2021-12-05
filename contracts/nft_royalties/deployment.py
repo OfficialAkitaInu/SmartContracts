@@ -5,7 +5,7 @@ from akita_inu_asa_utils import *
 from pyteal import *
 
 
-def deploy_app(client, private_key, approval_program, clear_program, global_schema, local_schema, app_args):
+def deploy_app(client, private_key, asset_id, approval_program, clear_program, global_schema, local_schema, app_args):
     # define sender as creator
     public_key = account.address_from_private_key(private_key)
 
@@ -23,7 +23,8 @@ def deploy_app(client, private_key, approval_program, clear_program, global_sche
                                               clear_program,
                                               global_schema,
                                               local_schema,
-                                              app_args)
+                                              app_args,
+                                              foreign_assets=[asset_id])
 
     # send transaction
     client.send_transactions([signed_txn])
@@ -33,8 +34,8 @@ def deploy_app(client, private_key, approval_program, clear_program, global_sche
     # display results
     transaction_response = client.pending_transaction_info(tx_id)
     app_id = transaction_response['application-index']
-    print("Deployed new app-id: " + str(app_id))
-    print("Deployed application address: " +
+    print('Deployed new app-id: ' + str(app_id))
+    print('Deployed application address: ' +
           encoding.encode_address(encoding.checksum(b'appID' + app_id.to_bytes(8, 'big'))))
 
     return app_id
@@ -50,8 +51,12 @@ def deploy(algod_address, algod_token, creator_mnemonic, asset_id, royalty_perce
     algod_client = get_algod_client(algod_token,
                                     algod_address)
 
-    compile_transfer_app(algod_client, asset_id, royalty_percent, royalty_payouts)
-    print("Program Compiled")
+    compile_transfer_app(algod_client,
+                         asset_id,
+                         public_key,
+                         royalty_percent,
+                         royalty_payouts)
+    print('Program Compiled')
 
     approval_program = load_compiled(file_path='nft_royalties/transfer.compiled')
     clear_program = load_compiled(file_path='nft_royalties/clear.compiled')
@@ -62,18 +67,21 @@ def deploy(algod_address, algod_token, creator_mnemonic, asset_id, royalty_perce
     app_args = []
 
     transfer_app_id = deploy_app(algod_client,
-                        private_key,
-                        approval_program,
-                        clear_program,
-                        global_schema,
-                        local_schema,
-                        app_args)
+                                 private_key,
+                                 asset_id,
+                                 approval_program,
+                                 clear_program,
+                                 global_schema,
+                                 local_schema,
+                                 app_args)
     escrow_hash = compile_escrow_app(algod_client, transfer_app_id)
 
     txn = transaction.AssetConfigTxn(sender=public_key,
                                      sp=algod_client.suggested_params(),
                                      index=asset_id,
                                      strict_empty_address_check=False,
+                                     manager=escrow_hash,
+                                     freeze=escrow_hash,
                                      clawback=escrow_hash)
     signed_txn = txn.sign(private_key)
     algod_client.send_transaction(signed_txn)
