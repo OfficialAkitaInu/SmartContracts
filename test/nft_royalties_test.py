@@ -74,7 +74,9 @@ class App:
                                       params,
                                       seller_address,
                                       sale.price)
-        txn1.fee = 4000 + 1000 * len(self.royalty_payouts)
+        txn1.fee = 4000
+        if sale.royalty_permille > 0:
+            txn1.fee += 1000 * len(self.royalty_payouts)
         txn2 = transaction.PaymentTxn(buyer_address,
                                       params,
                                       self.address,
@@ -313,18 +315,18 @@ class TestNFTRoyalties:
 
 
     def test_sell(self, client, app, wallet_1, wallet_2):
-        app.perform_sale(client, Sale(wallet_1, wallet_2, 1000000, 100))
+        app.perform_sale(client, Sale(wallet_1, wallet_2, 1500000, 100))
 
 
     def test_insufficient_royalty(self, client, app, wallet_1, wallet_2):
         with pytest.raises(AlgodHTTPError):
             # Should fail before we decrease the minimum royalty
-            app.perform_sale(client, Sale(wallet_2, wallet_1, 10000, 50))
+            app.perform_sale(client, Sale(wallet_2, wallet_1, 2500000, 50))
 
 
     def test_reduce_royalty(self, client, app, wallet_1, wallet_2):
         app.set_royalty(client, 40)
-        app.perform_sale(client, Sale(wallet_2, wallet_1, 10000, 50))
+        app.perform_sale(client, Sale(wallet_2, wallet_1, 2500000, 60))
 
     
     def test_no_authority(self, client, app, creator, wallet_1, wallet_2):

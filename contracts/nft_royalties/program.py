@@ -10,7 +10,6 @@ def transfer_approval(asset_id, app_manager_address, royalty_permille, royalty_p
     #                      the portion of the royalty paid to it
 
     ratio_sum = sum([r['ratio'] for r in royalty_payouts])
-    indices = range(len(royalty_payouts))
 
     # app_manager: stores app_manager_address on creation, can't be updated
     #              right now (may change this)
@@ -29,6 +28,7 @@ def transfer_approval(asset_id, app_manager_address, royalty_permille, royalty_p
     manager = AssetParam.manager(Int(0))
     freeze = AssetParam.freeze(Int(0))
     royalty_minimum = Gtxn[1].amount() * App.globalGet(royalty) / Int(1000)
+    royalty_payment = Gtxn[2].amount()
 
     # This function statically generates an inner transaction given an
     # item in royalty_payouts
@@ -40,7 +40,7 @@ def transfer_approval(asset_id, app_manager_address, royalty_permille, royalty_p
                     TxnField.type_enum: TxnType.Payment,
                     TxnField.receiver: Addr(receiver['address']),
                     TxnField.amount:
-                        royalty_minimum * Int(receiver['ratio']) / Int(ratio_sum),
+                        royalty_payment * Int(receiver['ratio']) / Int(ratio_sum),
                     TxnField.fee: Int(0),
                 }
             ),
@@ -126,10 +126,11 @@ def transfer_approval(asset_id, app_manager_address, royalty_permille, royalty_p
                 ),
                 Gtxn[2].receiver() == Global.current_application_address(),
 
-                Gtxn[2].amount() >= royalty_minimum,
+                royalty_payment >= royalty_minimum,
             )
         ),
-        Seq(*[payRoyalty(royalty_payouts[i]) for i in indices]),
+        If(royalty_payment > Int(0))
+        .Then(Seq(*[payRoyalty(r) for r in royalty_payouts])),
         App.globalPut(owner, Gtxn[0].asset_receiver()),
         Approve()
     )
