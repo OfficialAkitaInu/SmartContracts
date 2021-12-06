@@ -49,12 +49,7 @@ def transfer_approval(asset_id, app_manager_address, royalty_permille, royalty_p
 
     on_create = Seq(
         sender_has_nft,
-        Assert(
-            And(
-                Txn.assets.length() == Int(1),
-                sender_has_nft.value()
-            )
-        ),
+        Assert(sender_has_nft.value()),
         App.globalPut(app_manager, Addr(app_manager_address)),
         App.globalPut(owner, Addr(app_manager_address)),
         App.globalPut(royalty, Int(royalty_permille)),
@@ -211,12 +206,23 @@ def transfer_approval(asset_id, app_manager_address, royalty_permille, royalty_p
         Approve()
     )
 
-    program = Cond(
-        [Txn.application_id() == Int(0), on_create],
-        [Txn.on_completion() == OnComplete.NoOp, on_call],
-        [Txn.on_completion() == OnComplete.UpdateApplication, on_update],
-        [Txn.on_completion() == OnComplete.DeleteApplication, on_delete],
-        [Int(1), Reject()]
+    program = Seq(
+        Assert(
+            Or(
+                Txn.assets.length() == Int(0),
+                And(
+                    Txn.assets.length() == Int(1),
+                    Txn.assets[Int(0)] == Int(asset_id),
+                ),
+            ),
+        ),
+        Cond(
+            [Txn.application_id() == Int(0), on_create],
+            [Txn.on_completion() == OnComplete.NoOp, on_call],
+            [Txn.on_completion() == OnComplete.UpdateApplication, on_update],
+            [Txn.on_completion() == OnComplete.DeleteApplication, on_delete],
+            [Int(1), Reject()]
+        )
     )
     return program
 
