@@ -285,4 +285,5 @@ def compile_escrow_app(algod_client, transfer_app_id):
             )
     with open('build/nft_royalties/escrow.teal', 'w') as f:
         f.write(teal)
-    return compile_program(algod_client, teal, 'nft_royalties/escrow.compiled')
+    compile_program(algod_client, teal, 'nft_royalties/escrow.compiled')
+    return get_program_hash(algod_client, teal)

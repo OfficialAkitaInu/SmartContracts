@@ -55,7 +55,11 @@ def compile_program(client, source_code, file_path=None):
     else:
         check_build_dir()
         dump(base64.b64decode(compile_response['result']), 'build/' + file_path)
-    return compile_response["hash"]
+
+
+def get_program_hash(client, source_code):
+    compile_response = client.compile(source_code)
+    return compile_response['hash']
 
 
 # read user local state
@@ -176,7 +180,7 @@ def create_app_signed_txn(private_key,
                           global_schema,
                           local_schema,
                           app_args,
-                          **kwargs):
+                          asset_ids=None):
     """
         Creates an signed "create app" transaction to an application
             Args:
@@ -199,7 +203,7 @@ def create_app_signed_txn(private_key,
                                                     global_schema,
                                                     local_schema,
                                                     app_args,
-                                                    **kwargs)
+                                                    foreign_assets=asset_ids)
     signed_txn = sign_txn(unsigned_txn, private_key)
     return signed_txn, signed_txn.transaction.get_txid()
 

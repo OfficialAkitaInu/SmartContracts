@@ -24,7 +24,7 @@ def deploy_app(client, private_key, asset_id, approval_program, clear_program, g
                                               global_schema,
                                               local_schema,
                                               app_args,
-                                              foreign_assets=[asset_id])
+                                              asset_ids=[asset_id])
 
     # send transaction
     client.send_transactions([signed_txn])
