@@ -1,7 +1,0 @@
-{
-  "algodAddress": "http://localhost:4001",
-  "algodToken": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  "indexerAddress": "http://localhost:8980",
-  "indexerToken": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  "fund_account_mnemonic": "DO NOT STORE YOUR REAL KEY HERE",
-}

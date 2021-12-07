@@ -42,19 +42,6 @@ def wallet_1(test_config):
 
 
 @pytest.fixture(scope='class')
-def wallet_2(test_config, asset_id, client):
-    from akita_inu_asa_utils import generate_new_account, opt_in_asset_signed_txn
-    from .testing_utils import fund_account
-    wallet_mnemonic, private_key, public_key = generate_new_account()
-    wallet_2 = {'mnemonic': wallet_mnemonic, 'public_key': public_key, 'private_key': private_key}
-    fund_account(wallet_2['public_key'], test_config['fund_account_mnemonic'])
-
-    params = client.suggested_params()
-    opt_in_asset_signed_txn(private_key, public_key, params, asset_id)
-    return wallet_2
-
-
-@pytest.fixture(scope='class')
 def asset_id(test_config, wallet_1, client):
     from akita_inu_asa_utils import( create_asa_signed_txn,
         asset_id_from_create_txn)

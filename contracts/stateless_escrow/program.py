@@ -28,7 +28,6 @@ def lock_escrow():
 
     is_valid_claim = And(
         Global.group_size() == Int(2),
-        Global.latest_timestamp() >= Int(0),
         # Close Asset to Client
         Gtxn[0].type_enum() == TxnType.AssetTransfer,
         Gtxn[0].asset_close_to() == client,
