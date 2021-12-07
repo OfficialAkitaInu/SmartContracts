@@ -28,7 +28,7 @@ def client(test_config):
     return client
 
 
-@pytest.fixture(scope='class')
+#@pytest.fixture(scope='class')
 def wallet_1(test_config):
     from akita_inu_asa_utils import generate_new_account
     from .testing_utils import fund_account
