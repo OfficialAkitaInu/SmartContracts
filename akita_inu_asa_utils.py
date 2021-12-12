@@ -269,6 +269,7 @@ def noop_app_signed_txn(private_key,
                         public_key,
                         params,
                         app_id,
+                        app_args=None,
                         asset_ids=None):
     """
     Creates and signs an "noOp" transaction to an application
@@ -284,6 +285,7 @@ def noop_app_signed_txn(private_key,
     txn = transaction.ApplicationNoOpTxn(public_key,
                                          params,
                                          app_id,
+                                         app_args=app_args,
                                          foreign_assets=asset_ids)
     signed_txn = sign_txn(txn, private_key)
     return signed_txn, signed_txn.transaction.get_txid()

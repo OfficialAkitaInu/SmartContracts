@@ -96,10 +96,43 @@ class TestTimedAssetLockContract:
         global_state = read_global_state(client, public_key, app_id)
 
     def test_opt_in(self, app_id, client, asset_id, wallet_1):
-        pass
+        from akita_inu_asa_utils import opt_in_app_signed_txn, wait_for_txn_confirmation
+
+        public_key = wallet_1['public_key']
+        private_key = wallet_1['private_key']
+        txn, txn_id = opt_in_app_signed_txn(private_key, public_key, client.suggested_params(), app_id)
+        client.send_transactions([txn])
+        wait_for_txn_confirmation(client, txn_id, 5)
+
+        local_state = read_local_state(client, public_key, app_id)
+        global_state = read_global_state(client, public_key, app_id)
+
+        #TODO check states
 
     def test_claim(self, app_id, client, asset_id, wallet_1):
-        pass
+        from akita_inu_asa_utils import noop_app_signed_txn
+        public_key = wallet_1['public_key']
+        private_key = wallet_1['private_key']
+
+        app_args = []
+        txn, txn_id = noop_app_signed_txn(private_key, public_key, client.suggested_params(), app_id, app_args)
+        client.send_transactions([txn])
+        wait_for_txn_confirmation(client, txn_id, 5)
+
+        local_state = read_local_state(client, public_key, app_id)
+        global_state = read_global_state(client, public_key, app_id)
 
     def test_claim_to_soon(self, app_id, client, asset_id, wallet_1):
-        pass
+        from akita_inu_asa_utils import noop_app_signed_txn
+        public_key = wallet_1['public_key']
+        private_key = wallet_1['private_key']
+
+        app_args = []
+        txn, txn_id = noop_app_signed_txn(private_key, public_key, client.suggested_params(), app_id, app_args)
+        client.send_transactions([txn])
+        wait_for_txn_confirmation(client, txn_id, 5)
+
+        local_state = read_local_state(client, public_key, app_id)
+        global_state = read_global_state(client, public_key, app_id)
+
+        
