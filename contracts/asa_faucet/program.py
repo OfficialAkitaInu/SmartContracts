@@ -101,9 +101,9 @@ def compile_app(algod_client):
     compile_program(algod_client, clear_program(), 'asa_faucet_clear.compiled')
 
     write_schema(file_path='localSchema',
-                 num_ints=0,
+                 num_ints=1,
                  num_bytes=0)
     write_schema(file_path='globalSchema',
-                 num_ints=3,
-                 num_bytes=3)
+                 num_ints=5,
+                 num_bytes=0)
 
