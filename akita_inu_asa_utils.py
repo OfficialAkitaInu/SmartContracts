@@ -73,6 +73,23 @@ def read_global_state(client, addr, app_id):
             return app['params']['global-state']
 
 
+def pretty_print_state(state):
+    for keyvalue in state:
+        print(base64.b64decode(keyvalue['key']))
+        print(keyvalue['value'])
+    print("\n\n\n")
+
+
+def get_key_from_state(state, key):
+    for i in range(0, len(state)):
+        found_key = base64.b64decode(state[i]['key'])
+        if found_key == key:
+            if state[i]['value']['type'] == 1:
+                return base64.b64decode(state[i]['value']['bytes'])
+            elif state[i]['value']['type'] == 2:
+                return state[i]['value']['uint']
+
+
 def dump_teal_assembly(file_path, program_fn_pointer):
     check_build_dir()
     with open('build/' + file_path, 'w') as f:
@@ -105,12 +122,16 @@ def get_algod_client(token, address):
 
 
 def write_schema(file_path, num_ints, num_bytes):
-    schema = transaction.StateSchema(num_ints, num_bytes)
-    dump(schema, 'build/' + file_path)
+    f = open('build/' + file_path, "w")
+    json.dump({"num_ints": num_ints,
+               "num_bytes": num_bytes}, f)
+    f.close()
 
 
 def load_schema(file_path):
-    return load('build/' + file_path)
+    f = open('build/' + file_path, 'r')
+    stateJSON = json.load(f)
+    return transaction.StateSchema(stateJSON['num_ints'], stateJSON['num_bytes'])
 
 
 def wait_for_txn_confirmation(client, transaction_id, timeout):
