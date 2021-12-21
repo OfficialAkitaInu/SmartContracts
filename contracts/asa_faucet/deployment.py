@@ -41,7 +41,7 @@ def deploy_app(client, private_key, approval_program, clear_program, global_sche
 
 # asset_id is the ASAs ID
 # end time is the time to allow withdrawel from escrow
-def deploy(algod_address, algod_token, creator_mnemonic, asset_id, drip_time, min_algo_amount, min_asa_amount):
+def deploy(algod_address, algod_token, creator_mnemonic, asset_id, drip_amount, drip_time, min_algo_amount, min_asa_amount):
 
     private_key = mnemonic.to_private_key(creator_mnemonic)
     algod_client = get_algod_client(algod_token,
@@ -57,7 +57,8 @@ def deploy(algod_address, algod_token, creator_mnemonic, asset_id, drip_time, mi
         asset_id.to_bytes(8, "big"),
         drip_time.to_bytes(8, "big"),
         min_algo_amount.to_bytes(8, "big"),
-        min_asa_amount.to_bytes(8, "big")
+        min_asa_amount.to_bytes(8, "big"),
+        drip_amount.to_bytes(8, "big")
     ]
 
     app_id = deploy_app(algod_client,

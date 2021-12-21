@@ -3,16 +3,18 @@ import time
 
 import pytest
 from algosdk.v2client import algod
+from algosdk.future import transaction
 from algosdk import account, mnemonic, constants
 from algosdk.encoding import encode_address, is_valid_address
 from algosdk.error import AlgodHTTPError, TemplateInputError
-from akita_inu_asa_utils import read_local_state, read_global_state, wait_for_txn_confirmation
+from akita_inu_asa_utils import read_local_state, read_global_state, wait_for_txn_confirmation, get_key_from_state
 
 NUM_TEST_ASSET = int(1e6)
 
 MIN_ALGO_AMOUNT = 2
 MIN_ASA_AMOUNT = 15
 DRIP_TIME_SEC = 15
+DRIP_AMOUNT = 3
 
 @pytest.fixture(scope='class')
 def test_config():
@@ -59,13 +61,13 @@ def asset_id(test_config, wallet_1, client):
 # Note this fixture also shares the exact same application with all the test....unfortunately order in which test are
 # called in this file depend on order
 @pytest.fixture(scope='class')
-def app_id(test_config, asset_id, end_time, wallet_1):
+def app_id(test_config, asset_id, wallet_1):
     from contracts.asa_faucet.deployment import deploy
 
     algod_address = test_config['algodAddress']
     algod_token = test_config['algodToken']
     creator_mnemonic = wallet_1['mnemonic']
-    app_id = deploy(algod_address, algod_token, creator_mnemonic, asset_id, DRIP_TIME_SEC, MIN_ALGO_AMOUNT, MIN_ASA_AMOUNT)
+    app_id = deploy(algod_address, algod_token, creator_mnemonic, asset_id, DRIP_AMOUNT, DRIP_TIME_SEC, MIN_ALGO_AMOUNT, MIN_ASA_AMOUNT)
     return app_id
 
 
@@ -75,9 +77,9 @@ def clear_build_folder():
         os.remove(file.path)
 
 
-class TestTimedAssetLockContract:
+class TestASAFaucet:
     def test_build(self, client):
-        from contracts.timed_asset_lock_contract.program import compile_app
+        from contracts.asa_faucet.program import compile_app
         clear_build_folder()
         import os
         compile_app(client)
@@ -92,8 +94,11 @@ class TestTimedAssetLockContract:
         assert app_id
         public_key = wallet_1['public_key']
 
-        local_state = read_local_state(client, public_key, app_id)
         global_state = read_global_state(client, public_key, app_id)
+        assert get_key_from_state(global_state, b'asset_id_key') == asset_id
+        assert get_key_from_state(global_state, b'drip_time') == DRIP_TIME_SEC
+        assert get_key_from_state(global_state, b'min_algo_amount') == MIN_ALGO_AMOUNT
+        assert get_key_from_state(global_state, b'min_asset_amount') == MIN_ASA_AMOUNT
 
     def test_opt_in(self, app_id, client, asset_id, wallet_1):
         from akita_inu_asa_utils import opt_in_app_signed_txn, wait_for_txn_confirmation
@@ -105,34 +110,93 @@ class TestTimedAssetLockContract:
         wait_for_txn_confirmation(client, txn_id, 5)
 
         local_state = read_local_state(client, public_key, app_id)
-        global_state = read_global_state(client, public_key, app_id)
+        assert time.time() - 60 <= get_key_from_state(local_state, b'user_last_claim_time') <= time.time()
 
-        #TODO check states
+    def test_opt_in_asset(self, app_id, client, asset_id, wallet_1):
+        from akita_inu_asa_utils import get_application_address
+        public_key = wallet_1['public_key']
+        private_key = wallet_1['private_key']
+
+        app_address = get_application_address(app_id)
+        txn0 = transaction.PaymentTxn(public_key, client.suggested_params(), app_address, 201000)
+        app_args = [
+            "opt_in_asset".encode("utf-8")
+        ]
+        txn1 = transaction.ApplicationNoOpTxn(public_key, client.suggested_params(), app_id, app_args,
+                                              foreign_assets=[asset_id])
+
+        grouped = transaction.assign_group_id([txn0, txn1])
+        grouped = [grouped[0].sign(private_key),
+                   grouped[1].sign(private_key)]
+
+        txn_id = client.send_transactions(grouped)
+        wait_for_txn_confirmation(client, txn_id, 5)
+
+    def test_fund_faucet(self, app_id, client, asset_id, wallet_1):
+        from akita_inu_asa_utils import get_application_address, get_asset_balance
+        public_key = wallet_1['public_key']
+        private_key = wallet_1['private_key']
+
+        app_address = get_application_address(app_id)
+
+        txn0 = transaction.AssetTransferTxn(public_key, client.suggested_params(), app_address, NUM_TEST_ASSET - 20, asset_id)
+        app_args = [
+            "fund_faucet".encode("utf-8")
+        ]
+        txn1 = transaction.ApplicationNoOpTxn(public_key, client.suggested_params(), app_id, app_args, foreign_assets=[asset_id])
+
+        grouped = transaction.assign_group_id([txn0, txn1])
+        grouped = [grouped[0].sign(private_key),
+                   grouped[1].sign(private_key)]
+
+        txn_id = client.send_transactions(grouped)
+        wait_for_txn_confirmation(client, txn_id, 5)
+
+        assert get_asset_balance(client, app_address, asset_id) == (NUM_TEST_ASSET - 20)
+
 
     def test_claim(self, app_id, client, asset_id, wallet_1):
-        from akita_inu_asa_utils import noop_app_signed_txn
+        from akita_inu_asa_utils import noop_app_signed_txn, get_asset_balance, get_application_address
+
+        time.sleep(DRIP_TIME_SEC)
         public_key = wallet_1['public_key']
         private_key = wallet_1['private_key']
-
-        app_args = []
-        txn, txn_id = noop_app_signed_txn(private_key, public_key, client.suggested_params(), app_id, app_args)
-        client.send_transactions([txn])
+        wallet_balance_pre = get_asset_balance(client, public_key, asset_id)
+        app_args = [
+            "get_drip".encode("utf-8")
+        ]
+        app_address = get_application_address(app_id)
+        txn0 = transaction.PaymentTxn(public_key, client.suggested_params(), app_address, 1000)
+        txn1 = transaction.ApplicationNoOpTxn(public_key, client.suggested_params(), app_id, app_args, foreign_assets=[asset_id])
+        grouped = transaction.assign_group_id([txn0, txn1])
+        grouped = [grouped[0].sign(private_key),
+                   grouped[1].sign(private_key)]
+        txn_id = client.send_transactions(grouped)
         wait_for_txn_confirmation(client, txn_id, 5)
 
         local_state = read_local_state(client, public_key, app_id)
-        global_state = read_global_state(client, public_key, app_id)
+        assert get_asset_balance(client, public_key, asset_id) == wallet_balance_pre + DRIP_AMOUNT
+        assert get_key_from_state(local_state, b'user_last_claim_time') <= (time.time() + 15)
 
     def test_claim_to_soon(self, app_id, client, asset_id, wallet_1):
-        from akita_inu_asa_utils import noop_app_signed_txn
+        from akita_inu_asa_utils import get_application_address
         public_key = wallet_1['public_key']
         private_key = wallet_1['private_key']
 
-        app_args = []
-        txn, txn_id = noop_app_signed_txn(private_key, public_key, client.suggested_params(), app_id, app_args)
-        client.send_transactions([txn])
-        wait_for_txn_confirmation(client, txn_id, 5)
+        app_args = [
+            "get_drip".encode("utf-8")
+        ]
+        app_address = get_application_address(app_id)
+        txn0 = transaction.PaymentTxn(public_key, client.suggested_params(), app_address, 1000)
+        txn1 = transaction.ApplicationNoOpTxn(public_key, client.suggested_params(), app_id, app_args,
+                                              foreign_assets=[asset_id])
+        grouped = transaction.assign_group_id([txn0, txn1])
 
-        local_state = read_local_state(client, public_key, app_id)
-        global_state = read_global_state(client, public_key, app_id)
+        grouped = [grouped[0].sign(private_key),
+                   grouped[1].sign(private_key)]
 
-        
+        with pytest.raises(AlgodHTTPError):
+            txn_id = client.send_transactions(grouped)
+            wait_for_txn_confirmation(client, txn_id, 5)
+
+
