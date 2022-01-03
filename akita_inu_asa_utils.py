@@ -25,6 +25,10 @@ def get_asset_balance(client, public_key, asset_id):
     return 0
 
 
+def get_algo_balance(client, public_key):
+    return client.account_info(public_key)['amount']
+
+
 def generate_new_account():
     private_key, address = account.generate_account()
     return mnemonic.from_private_key(private_key), private_key, address
@@ -56,21 +60,49 @@ def compile_program(client, source_code, file_path=None):
 # read user local state
 def read_local_state(client, addr, app_id):
     results = client.account_info(addr)
-    if len(results['apps-local-state']):
-        local_state = results['apps-local-state'][0]
-        for index in local_state:
-            if local_state[index] == app_id:
-                if 'key-value' in local_state.keys():
-                    return local_state['key-value']
+    output = {}
+    for app in results['apps-local-state']:
+        if app['id'] == app_id:
+            for key_value in app['key-value']:
+                if key_value['value']['type'] == 1:
+                    value = key_value['value']['bytes']
+                else:
+                    value = key_value['value']['uint']
+                output[base64.b64decode(key_value['key']).decode()] = value
+            return output
 
 
 # read app global state
 def read_global_state(client, addr, app_id):
     results = client.account_info(addr)
+    output = {}
     apps_created = results['created-apps']
     for app in apps_created:
         if app['id'] == app_id :
-            return app['params']['global-state']
+            for key_value in app['params']['global-state']:
+                if key_value['value']['type'] == 1:
+                    value = key_value['value']['bytes']
+                else:
+                    value = key_value['value']['uint']
+                output[base64.b64decode(key_value['key']).decode()] = value
+            return output
+
+
+def pretty_print_state(state):
+    for keyvalue in state:
+        print(base64.b64decode(keyvalue['key']))
+        print(keyvalue['value'])
+    print("\n\n\n")
+
+
+def get_key_from_state(state, key):
+    for i in range(0, len(state)):
+        found_key = base64.b64decode(state[i]['key'])
+        if found_key == key:
+            if state[i]['value']['type'] == 1:
+                return base64.b64decode(state[i]['value']['bytes'])
+            elif state[i]['value']['type'] == 2:
+                return state[i]['value']['uint']
 
 
 def pretty_print_state(state):
