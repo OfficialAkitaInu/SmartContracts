@@ -4,14 +4,13 @@ from algosdk import encoding, account, mnemonic
 
 
 from joblib import dump, load
-import time
 import json
 import os
 import sys
 import base64
 
 
-def getApplicationAddress(app_id):
+def get_application_address(app_id):
     return encoding.encode_address(encoding.checksum(b'appID' + app_id.to_bytes(8, 'big')))
 
 
@@ -25,6 +24,10 @@ def get_asset_balance(client, public_key, asset_id):
         if asset['asset-id'] == asset_id:
             return asset['amount']
     return 0
+
+
+def get_algo_balance(client, public_key):
+    return client.account_info(public_key)['amount']
 
 
 def generate_new_account():
@@ -58,21 +61,66 @@ def compile_program(client, source_code, file_path=None):
 # read user local state
 def read_local_state(client, addr, app_id):
     results = client.account_info(addr)
-    if len(results['apps-local-state']):
-        local_state = results['apps-local-state'][0]
-        for index in local_state:
-            if local_state[index] == app_id:
-                if 'key-value' in local_state.keys():
-                    return local_state['key-value']
+    output = {}
+    for app in results['apps-local-state']:
+        if app['id'] == app_id:
+            for key_value in app['key-value']:
+                if key_value['value']['type'] == 1:
+                    value = key_value['value']['bytes']
+                else:
+                    value = key_value['value']['uint']
+                output[base64.b64decode(key_value['key']).decode()] = value
+            return output
 
 
 # read app global state
 def read_global_state(client, addr, app_id):
     results = client.account_info(addr)
+    output = {}
     apps_created = results['created-apps']
     for app in apps_created:
         if app['id'] == app_id :
-            return app['params']['global-state']
+            for key_value in app['params']['global-state']:
+                if key_value['value']['type'] == 1:
+                    value = key_value['value']['bytes']
+                else:
+                    value = key_value['value']['uint']
+                output[base64.b64decode(key_value['key']).decode()] = value
+            return output
+
+
+def pretty_print_state(state):
+    for keyvalue in state:
+        print(base64.b64decode(keyvalue['key']))
+        print(keyvalue['value'])
+    print("\n\n\n")
+
+
+def get_key_from_state(state, key):
+    for i in range(0, len(state)):
+        found_key = base64.b64decode(state[i]['key'])
+        if found_key == key:
+            if state[i]['value']['type'] == 1:
+                return base64.b64decode(state[i]['value']['bytes'])
+            elif state[i]['value']['type'] == 2:
+                return state[i]['value']['uint']
+
+
+def pretty_print_state(state):
+    for keyvalue in state:
+        print(base64.b64decode(keyvalue['key']))
+        print(keyvalue['value'])
+    print("\n\n\n")
+
+
+def get_key_from_state(state, key):
+    for i in range(0, len(state)):
+        found_key = base64.b64decode(state[i]['key'])
+        if found_key == key:
+            if state[i]['value']['type'] == 1:
+                return base64.b64decode(state[i]['value']['bytes'])
+            elif state[i]['value']['type'] == 2:
+                return state[i]['value']['uint']
 
 
 def dump_teal_assembly(file_path, program_fn_pointer):
@@ -130,7 +178,7 @@ def load_developer_config(filename='DeveloperConfig.json', raise_error_if_not_fo
 
     if raise_error_if_not_found:
         raise IOError('File not found')
-
+        
     fp = open(file_path)
     return json.load(fp)
 
@@ -140,12 +188,16 @@ def get_algod_client(token, address):
 
 
 def write_schema(file_path, num_ints, num_bytes):
-    schema = transaction.StateSchema(num_ints, num_bytes)
-    dump(schema, 'build/' + file_path)
+    f = open('build/' + file_path, "w")
+    json.dump({"num_ints": num_ints,
+               "num_bytes": num_bytes}, f)
+    f.close()
 
 
 def load_schema(file_path):
-    return load('build/' + file_path)
+    f = open('build/' + file_path, 'r')
+    stateJSON = json.load(f)
+    return transaction.StateSchema(stateJSON['num_ints'], stateJSON['num_bytes'])
 
 
 def wait_for_txn_confirmation(client, transaction_id, timeout):
@@ -228,7 +280,6 @@ def create_app_signed_txn(private_key,
                                                     global_schema,
                                                     local_schema,
                                                     app_args)
-
     signed_txn = sign_txn(unsigned_txn, private_key)
     return signed_txn, signed_txn.transaction.get_txid()
 
@@ -305,6 +356,7 @@ def noop_app_signed_txn(private_key,
                         public_key,
                         params,
                         app_id,
+                        app_args=None,
                         asset_ids=None):
     """
     Creates and signs an "noOp" transaction to an application
@@ -320,6 +372,7 @@ def noop_app_signed_txn(private_key,
     txn = transaction.ApplicationNoOpTxn(public_key,
                                          params,
                                          app_id,
+                                         app_args=app_args,
                                          foreign_assets=asset_ids)
     signed_txn = sign_txn(txn, private_key)
     return signed_txn, signed_txn.transaction.get_txid()
@@ -454,6 +507,7 @@ def payment_signed_txn(sender_private_key,
                                      params,
                                      receiver_public_key,
                                      amount)
+
     else:
         txn = transaction.AssetTransferTxn(sender_public_key,
                                            params,
@@ -464,22 +518,3 @@ def payment_signed_txn(sender_private_key,
     signed_txn = sign_txn(txn, sender_private_key)
     return signed_txn, signed_txn.transaction.get_txid()
 
-
-def create_logic_sig_signed_transaction(sender_private_key,
-                                        teal_source,
-                                        payment_transaction):
-    """
-            Creates and signs an "logic signature" transaction to an application, this works with algo or asa
-                Args:
-                    sender_private_key (str): private key of sender
-                    teal_source (str): teal source code
-                    payment_transaction (str):
-                Returns:
-                    tuple: Tuple containing the signed transaction and signed transaction id
-    """
-
-    compiled_binary = compile_program(teal_source)
-    logic_sig = transaction.LogicSig(compiled_binary)
-    txn = transaction.LogicSigTransaction(payment_transaction, logic_sig)
-    signed_txn = sign_txn(txn, sender_private_key)
-    return signed_txn, signed_txn.transaction.get_txid()
