@@ -62,43 +62,108 @@ asset_holding_get AssetBalance
 store 2
 store 3
 global GroupSize
-int 3
+int 4
 ==
 gtxn 0 TypeEnum
-int pay
-==
-&&
-gtxn 0 Amount
-int 1000
-==
-&&
-gtxn 0 Receiver
-global CurrentApplicationAddress
-==
-&&
-gtxn 1 TypeEnum
 int axfer
 ==
 &&
-gtxn 1 AssetAmount
+gtxn 0 XferAsset
+byte "New_Asset_ID"
+app_global_get
+==
+&&
+gtxn 0 AssetAmount
+int 0
+==
+&&
+gtxn 0 Sender
+gtxn 0 AssetReceiver
+==
+&&
+gtxn 0 RekeyTo
+global ZeroAddress
+==
+&&
+gtxn 0 CloseRemainderTo
+global ZeroAddress
+==
+&&
+gtxn 0 AssetCloseTo
+global ZeroAddress
+==
+&&
+gtxn 1 TypeEnum
+int pay
+==
+&&
+gtxn 1 Amount
+int 1000
+==
+&&
+gtxn 1 Receiver
+global CurrentApplicationAddress
+==
+&&
+gtxn 1 Sender
+gtxn 0 AssetReceiver
+==
+&&
+gtxn 1 RekeyTo
+global ZeroAddress
+==
+&&
+gtxn 1 CloseRemainderTo
+global ZeroAddress
+==
+&&
+gtxn 1 AssetCloseTo
+global ZeroAddress
+==
+&&
+gtxn 2 TypeEnum
+int axfer
+==
+&&
+gtxn 2 AssetAmount
 int 0
 >
 &&
-gtxn 1 XferAsset
+gtxn 2 XferAsset
 byte "Swap_Asset_ID"
 app_global_get
 ==
 &&
-gtxn 1 AssetReceiver
+gtxn 2 Sender
+gtxn 1 Sender
+==
+&&
+gtxn 2 AssetReceiver
 global CurrentApplicationAddress
 ==
 &&
-gtxn 2 OnCompletion
+gtxn 2 RekeyTo
+global ZeroAddress
+==
+&&
+gtxn 2 CloseRemainderTo
+global ZeroAddress
+==
+&&
+gtxn 2 AssetCloseTo
+global ZeroAddress
+==
+&&
+gtxn 3 OnCompletion
 int NoOp
 ==
 &&
-gtxn 2 NumAppArgs
+gtxn 3 NumAppArgs
 int 1
+==
+&&
+gtxn 3 Sender
+gtxn 2 Sender
 ==
 &&
 load 0
@@ -106,7 +171,7 @@ load 0
 load 2
 &&
 assert
-gtxn 1 AssetAmount
+gtxn 2 AssetAmount
 byte "Multiply"
 app_global_get
 *

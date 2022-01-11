@@ -104,9 +104,8 @@ def opt_in_assets_txn(app_id, client, wallet_1, swap_asset, new_asset):
 
     app_address = get_application_address(app_id)
     params = client.suggested_params()
-    txn0 = transaction.PaymentTxn(public_key, params, app_address, 801000)
+    txn0 = transaction.PaymentTxn(public_key, params, app_address, 302000)
     app_args = [
-        "opt_in_assets".encode("utf-8"),
         swap_asset.to_bytes(8, "big"),
         new_asset.to_bytes(8, "big")
     ]
@@ -120,27 +119,18 @@ def opt_in_assets_txn(app_id, client, wallet_1, swap_asset, new_asset):
     wait_for_txn_confirmation(client, txn_id, 5)
 
 def swap(app_id, client, wallet_1, wallet_2, swap_asset, amount):
-    from akita_inu_asa_utils import opt_in_asset_signed_txn
     public_key = wallet_2['public_key']
     private_key = wallet_2['private_key']
     new_asset = read_global_state(client, wallet_1["public_key"], app_id)["New_Asset_ID"]
 
     app_address = get_application_address(app_id)
-    # opt into asset
-    params = client.suggested_params()
-    txn, txn_id = opt_in_asset_signed_txn(private_key, public_key, params, new_asset)
-    client.send_transactions([txn])
-    wait_for_txn_confirmation(client, txn_id, 5)
 
     params = client.suggested_params()
-
-    txn0 = transaction.PaymentTxn(public_key, params, app_address, 1000)
+    txn0 = transaction.AssetTransferTxn(public_key, params, public_key, 0, new_asset)
     txn1 = transaction.AssetTransferTxn(public_key, params, app_address, amount, swap_asset)
-    app_args = [
-        "swap".encode("utf-8"),
-    ]
+    app_args = []
     txn2 = transaction.ApplicationNoOpTxn(public_key, params, app_id, app_args, foreign_assets=[swap_asset, new_asset])
-
+    txn2.fee = 2000
     grouped = transaction.assign_group_id([txn0, txn1, txn2])
     grouped = [grouped[0].sign(private_key),
                grouped[1].sign(private_key),
@@ -184,7 +174,6 @@ class TestAkitaTokenSwapperContract:
         txn = txn.sign(wallet_1['private_key'])
         txn_id = client.send_transactions([txn])
         wait_for_txn_confirmation(client, txn_id, 5)
-
 
     def test_swap_user_not_opted(self, app_id, client, wallet_2, swap_asset):
         public_key = wallet_2['public_key']

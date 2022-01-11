@@ -9,8 +9,6 @@ def approval_program():
     new_asset_ID = Bytes("New_Asset_ID")
     multiplier = Bytes("Multiply")
 
-    swap_asset_balance = AssetHolding.balance(Txn.sender(), App.globalGet(swap_asset_ID))
-    new_asset_balance = AssetHolding.balance(Txn.sender(), App.globalGet(new_asset_ID))
     asset_decimal = AssetParam.decimals(App.globalGet(new_asset_ID))
 
     @Subroutine(TealType.none)
@@ -51,17 +49,15 @@ def approval_program():
                    Gtxn[0].type_enum() == TxnType.Payment,
                    Gtxn[0].receiver() == Global.current_application_address(),
                    Gtxn[0].sender() == Global.creator_address(),
-                   Gtxn[0].amount() == Int(801000),
-
-                   Gtxn[1].application_args.length() == Int(3),
+                   Gtxn[0].amount() == Int(302000),
                    Gtxn[1].application_id() == Global.current_application_id(),
                    Gtxn[1].on_completion() == OnComplete.NoOp)
                ),
 
+        opt_into_asset(Btoi(Txn.application_args[0])),
         opt_into_asset(Btoi(Txn.application_args[1])),
-        opt_into_asset(Btoi(Txn.application_args[2])),
-        App.globalPut(swap_asset_ID, Btoi(Txn.application_args[1])),
-        App.globalPut(new_asset_ID, Btoi(Txn.application_args[2])),
+        App.globalPut(swap_asset_ID, Btoi(Txn.application_args[0])),
+        App.globalPut(new_asset_ID, Btoi(Txn.application_args[1])),
         asset_decimal,
         Assert(asset_decimal.hasValue()),
         App.globalPut(multiplier, Exp(Int(10),asset_decimal.value())),
@@ -69,24 +65,27 @@ def approval_program():
     )
 
     swap = Seq(
-        swap_asset_balance,
-        new_asset_balance,
         Assert(And(Global.group_size() == Int(3),
-                   Gtxn[0].type_enum() == TxnType.Payment,
-                   Gtxn[0].amount() == Int(1000),
-                   Gtxn[0].receiver() == Global.current_application_address(),
+                   Gtxn[0].type_enum() == TxnType.AssetTransfer,
+                   Gtxn[0].xfer_asset() == App.globalGet(new_asset_ID),
+                   Gtxn[0].asset_amount() == Int(0),
+                   Gtxn[0].sender() == Gtxn[0].asset_receiver(),
+                   Gtxn[0].rekey_to() == Global.zero_address(),
+                   Gtxn[0].close_remainder_to() == Global.zero_address(),
+                   Gtxn[0].asset_close_to() == Global.zero_address(),
 
                    Gtxn[1].type_enum() == TxnType.AssetTransfer,
                    Gtxn[1].asset_amount() > Int(0),
                    Gtxn[1].xfer_asset() == App.globalGet(swap_asset_ID),
+                   Gtxn[1].sender() == Gtxn[0].sender(),
                    Gtxn[1].asset_receiver() == Global.current_application_address(),
+                   Gtxn[1].rekey_to() == Global.zero_address(),
+                   Gtxn[1].close_remainder_to() == Global.zero_address(),
+                   Gtxn[1].asset_close_to() == Global.zero_address(),
 
                    Gtxn[2].on_completion() == OnComplete.NoOp,
-                   Gtxn[2].application_args.length() == Int(1),
-                   #user must be opted into old asset
-                   swap_asset_balance.hasValue(),
-                   #user must be opted into new asset
-                   new_asset_balance.hasValue())),
+                   Gtxn[2].application_args.length() == Int(0),
+                   Gtxn[2].sender() == Gtxn[1].sender())),
         swap_token(Gtxn[1].asset_amount() * App.globalGet(multiplier)),
         Approve()
     )
@@ -96,7 +95,7 @@ def approval_program():
         [
             Or(
                 # Your fees shouldn't exceed an unreasonable amount
-                Txn.fee() > Int(1000),
+                Txn.fee() > Int(2000),
                 # No rekeys allowed
                 Txn.rekey_to() != Global.zero_address(),
                 # This smart contract cannot be closed out.
@@ -117,8 +116,8 @@ def approval_program():
         ],
 
         [Txn.application_id() == Int(0), Approve()],
-        [Txn.application_args[0] == Bytes("opt_in_assets"), opt_in_assets],
-        [Txn.application_args[0] == Bytes("swap"), swap]
+        [Txn.application_args.length() == Int(2), opt_in_assets],
+        [Txn.on_completion() == OnComplete.NoOp, swap],
     )
 
     return compileTeal(program, Mode.Application, version=5)
