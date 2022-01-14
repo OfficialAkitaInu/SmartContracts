@@ -8,6 +8,8 @@ import json
 import os
 import base64
 
+BALANCE_PER_ASSET = 100000
+
 
 def get_application_address(app_id):
     return encoding.encode_address(encoding.checksum(b'appID' + app_id.to_bytes(8, 'big')))
@@ -25,9 +27,19 @@ def get_asset_balance(client, public_key, asset_id):
     return 0
 
 
+def is_opted_into_asset(client, public_key, asset_id):
+    for asset in client.account_info(public_key)['assets']:
+        print(asset['asset-id'])
+        if asset['asset-id'] == asset_id:
+            return True
+    return False
+
+
 def get_algo_balance(client, public_key):
     return client.account_info(public_key)['amount']
 
+def get_min_algo_balance(number_assets):
+    return BALANCE_PER_ASSET + BALANCE_PER_ASSET * number_assets
 
 def generate_new_account():
     private_key, address = account.generate_account()
@@ -81,28 +93,11 @@ def read_global_state(client, addr, app_id):
         if app['id'] == app_id :
             for key_value in app['params']['global-state']:
                 if key_value['value']['type'] == 1:
-                    value = key_value['value']['bytes']
+                    value = base64.b64decode(key_value['value']['bytes'])
                 else:
                     value = key_value['value']['uint']
                 output[base64.b64decode(key_value['key']).decode()] = value
             return output
-
-
-def pretty_print_state(state):
-    for keyvalue in state:
-        print(base64.b64decode(keyvalue['key']))
-        print(keyvalue['value'])
-    print("\n\n\n")
-
-
-def get_key_from_state(state, key):
-    for i in range(0, len(state)):
-        found_key = base64.b64decode(state[i]['key'])
-        if found_key == key:
-            if state[i]['value']['type'] == 1:
-                return base64.b64decode(state[i]['value']['bytes'])
-            elif state[i]['value']['type'] == 2:
-                return state[i]['value']['uint']
 
 
 def pretty_print_state(state):
@@ -223,7 +218,8 @@ def create_app_signed_txn(private_key,
                           clear_program,
                           global_schema,
                           local_schema,
-                          app_args):
+                          app_args,
+                          pages):
     """
         Creates an signed "create app" transaction to an application
             Args:
@@ -245,7 +241,8 @@ def create_app_signed_txn(private_key,
                                                     clear_program,
                                                     global_schema,
                                                     local_schema,
-                                                    app_args)
+                                                    app_args,
+                                                    extra_pages=pages)
     signed_txn = sign_txn(unsigned_txn, private_key)
     return signed_txn, signed_txn.transaction.get_txid()
 
