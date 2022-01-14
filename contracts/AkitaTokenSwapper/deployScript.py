@@ -13,7 +13,9 @@ new_asset = 523683256
 algod_address = "http://localhost:4001"
 algod_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 client = algod.AlgodClient(algod_token, algod_address)
+
 creator_mnemonic = "INPUT MNEMONIC HERE, DO NOT COMMIT YOUR MNEMONIC"
+
 app_id = deploy(algod_address, algod_token, creator_mnemonic)
 
 
