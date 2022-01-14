@@ -9,6 +9,10 @@ import os
 import base64
 
 
+def zero_address():
+    return encoding.encode_address(bytes(32))
+
+
 def get_application_address(app_id):
     return encoding.encode_address(encoding.checksum(b'appID' + app_id.to_bytes(8, 'big')))
 
@@ -55,6 +59,11 @@ def compile_program(client, source_code, file_path=None):
     else:
         check_build_dir()
         dump(base64.b64decode(compile_response['result']), 'build/' + file_path)
+
+
+def get_program_hash(client, source_code):
+    compile_response = client.compile(source_code)
+    return compile_response['hash']
 
 
 # read user local state
@@ -223,7 +232,8 @@ def create_app_signed_txn(private_key,
                           clear_program,
                           global_schema,
                           local_schema,
-                          app_args):
+                          app_args,
+                          asset_ids=None):
     """
         Creates an signed "create app" transaction to an application
             Args:
@@ -245,7 +255,8 @@ def create_app_signed_txn(private_key,
                                                     clear_program,
                                                     global_schema,
                                                     local_schema,
-                                                    app_args)
+                                                    app_args,
+                                                    foreign_assets=asset_ids)
     signed_txn = sign_txn(unsigned_txn, private_key)
     return signed_txn, signed_txn.transaction.get_txid()
 
