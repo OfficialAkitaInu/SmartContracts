@@ -75,13 +75,14 @@ def read_local_state(client, addr, app_id):
     output = {}
     for app in results['apps-local-state']:
         if app['id'] == app_id:
-            for key_value in app['key-value']:
-                if key_value['value']['type'] == 1:
-                    value = key_value['value']['bytes']
-                else:
-                    value = key_value['value']['uint']
-                output[base64.b64decode(key_value['key']).decode()] = value
-            return output
+            if 'key-value' in app:
+                for key_value in app['key-value']:
+                    if key_value['value']['type'] == 1:
+                        value = key_value['value']['bytes']
+                    else:
+                        value = key_value['value']['uint']
+                    output[base64.b64decode(key_value['key']).decode()] = value
+                return output
 
 
 # read app global state
@@ -219,7 +220,7 @@ def create_app_signed_txn(private_key,
                           global_schema,
                           local_schema,
                           app_args,
-                          pages):
+                          pages=0):
     """
         Creates an signed "create app" transaction to an application
             Args:

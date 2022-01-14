@@ -100,18 +100,17 @@ def clear_build_folder():
 def assert_state(local_state, global_state, asset_id, receiver_address, unlock_time):
     assert local_state is None
     assert len(global_state) == 3
-    expected_vars = {b'asset_id': asset_id,
-                    b'receiver_address_key': receiver_address,
-                    b'unlock_time': unlock_time}
+    expected_vars = {"asset_id": asset_id,
+                    "receiver_address_key": receiver_address,
+                    "unlock_time": unlock_time}
 
     # unfortunately it seems that values get put into program state randomly so I have to do this smelly stuff
-    for i in range(0, 3):
-        key = base64.b64decode(global_state[i]['key'])
-        assert key in expected_vars.keys()
-        if key == b'receiver_address_key':
-            assert encode_address(base64.b64decode(global_state[i]['value']['bytes'])) == expected_vars[key]
+    for key in expected_vars.keys():
+        assert key in global_state.keys()
+        if key == "receiver_address_key":
+            assert encode_address(global_state[key]) == expected_vars[key]
         else:
-            assert global_state[i]['value']['uint'] == expected_vars[key]
+            assert global_state[key] == expected_vars[key]
 
 
 def assert_adversary_actions(app_id, wallet, client, asset_id,):
