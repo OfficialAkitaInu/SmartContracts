@@ -1,29 +1,32 @@
 """
-Massive thank you to the devs over on the Nekoin team, at the time of this commit our devs were all brand new to smart
-contracts and still learning and ramping up on the whole process.
+Massive thank you to the devs over on the Nekoin team, at the time of this commit
+our devs were all brand new to smart contracts and still learning and ramping up
+on the whole process.
 """
 
+from pyteal import *
 from akita_inu_asa_utils import *
-from pyteal import *
-
-from pyteal import *
-import sys
 
 
 def approval_program():
-    # Keys for the global data stored by this smart contract.
+    '''
+    TODO: add description
+    '''
 
-    # AssetID that this smart contract will freeze.
+    # Keys for the global data stored by this smart contract.
+    # Asset ID that this smart contract will freeze.
     asset_id_key = Bytes("asset_id")
     # Address of the wallet that will receive the funds in this smart contract when it is closed.
     receiver_address_key = Bytes("receiver_address_key")
     # Timestamp after which this smart contract can be closed.
     unlock_time_key = Bytes("unlock_time")
 
-    # Sends all of the asset specified by assetID to the specified account.
     @Subroutine(TealType.none)
-    def closeAssetsTo(assetID: Expr, account: Expr) -> Expr:
-        asset_holding = AssetHolding.balance(Global.current_application_address(), assetID)
+    def close_assets_to(asset_id: Expr, account: Expr) -> Expr:
+        '''
+        Sends all the asset specified by asset_id to the specified account.
+        '''
+        asset_holding = AssetHolding.balance(Global.current_application_address(), asset_id)
         return Seq(
             asset_holding,
             If(asset_holding.hasValue()).Then(
@@ -32,7 +35,7 @@ def approval_program():
                     InnerTxnBuilder.SetFields(
                         {
                             TxnField.type_enum: TxnType.AssetTransfer,
-                            TxnField.xfer_asset: assetID,
+                            TxnField.xfer_asset: asset_id,
                             TxnField.asset_close_to: account,
                         }
                     ),
@@ -41,9 +44,11 @@ def approval_program():
             ),
         )
 
-    # Sends all of the Algo's to the specified account.
     @Subroutine(TealType.none)
-    def closeAccountTo(account: Expr) -> Expr:
+    def close_account_to(account: Expr) -> Expr:
+        '''
+        Sends all of the Algo's to the specified account.
+        '''
         return If(Balance(Global.current_application_address()) != Int(0)).Then(
             Seq(
                 InnerTxnBuilder.Begin(),
@@ -58,7 +63,7 @@ def approval_program():
         )
 
     @Subroutine(TealType.uint64)
-    def assert3Group() -> Expr:
+    def assert3_group() -> Expr:
         return And(Global.group_size() == Int(3),
                    Gtxn[0].type_enum() == TxnType.Payment,
                    Gtxn[0].receiver() == Global.current_application_address(),
@@ -67,16 +72,18 @@ def approval_program():
                    Gtxn[2].asset_receiver() == Global.current_application_address(),)
 
     @Subroutine(TealType.uint64)
-    def assert1Group() -> Expr:
+    def assert1_group() -> Expr:
+        '''
+        OnCreate handles creating this freeze smart contract.
+        arg[0]: the assetID of the asset we want to freeze. For Akita Inu ASA it is 384303832
+        arg[1]: the recipient of the assets held in this smart contract. Must be the creator.
+        arg[2]: the Unix timestamp of when this smart contract can be closed. When the
+        contract is closed, everything is sent to the receiver.
+        '''
         return And(Global.group_size() == Int(1),
                    Or(Txn.application_id() == Int(0),
                       Txn.on_completion() == OnComplete.DeleteApplication,))
 
-    # OnCreate handles creating this freeze smart contract.
-    # arg[0]: the assetID of the asset we want to freeze. For Akita Inu ASA it is 384303832
-    # arg[1]: the recipient of the assets held in this smart contract. Must be the creator.
-    # arg[2]: the Unix timestamp of when this smart contract can be closed. When the
-    #         contract is closed, everything is sent to the receiver.
     on_create_unlock_time = Btoi(Txn.application_args[2])
     on_create_receiver = Txn.application_args[1]
     on_create = Seq(
@@ -129,8 +136,8 @@ def approval_program():
         ),
         # These operations are only run if unlock timestamp has passed.
         # Close all the assets and Algo's held by this account to the receiver.
-        closeAssetsTo(App.globalGet(asset_id_key), App.globalGet(receiver_address_key)),
-        closeAccountTo(App.globalGet(receiver_address_key)),
+        close_assets_to(App.globalGet(asset_id_key), App.globalGet(receiver_address_key)),
+        close_account_to(App.globalGet(receiver_address_key)),
         Approve(),
     )
 
@@ -153,21 +160,27 @@ def approval_program():
         ],
 
         # single transactions
-        [And(assert1Group(), Txn.application_id() == Int(0)), on_create],
-        [And(assert1Group(), Txn.on_completion() == OnComplete.DeleteApplication), on_delete],
+        [And(assert1_group(), Txn.application_id() == Int(0)), on_create],
+        [And(assert1_group(), Txn.on_completion() == OnComplete.DeleteApplication), on_delete],
 
         # three transaction
-        [assert3Group(), on_opt_in],
+        [assert3_group(), on_opt_in],
     )
 
     return compileTeal(program, Mode.Application, version=5)
 
 
 def clear_program():
+    '''
+    Clear program
+    '''
     return compileTeal(Reject(), Mode.Application, version=5)
 
 
 def compile_app(algod_client):
+    '''
+    Build app from scratch
+    '''
     dump_teal_assembly('asset_timed_vault_approval.teal', approval_program)
     dump_teal_assembly('asset_timed_vault_clear.teal', clear_program)
 
@@ -180,4 +193,3 @@ def compile_app(algod_client):
     write_schema(file_path='globalSchema',
                  num_ints=3,
                  num_bytes=3)
-
