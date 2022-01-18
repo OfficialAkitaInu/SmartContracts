@@ -1,12 +1,22 @@
 version: '3.7'
 services:
-    algo-testnet:
+    akita-smart-contracts:
         build:
             context: .
-        restart: always
         volumes:
-            - ./data:/root/node/data
+            # Configs should not be baked into container, update this stanza as appropriate
+            - ./DeveloperConfigExample.json:/SmartContracts/DeveloperConfigExample.json
+            - ./test/testConfig.json:/SmartContracts/test/testConfig.json
+        stdin_open: true
         tty: true
+    algo-testnet:
+        image: algorand/testnet:latest
+        working_dir: /root/node
+#       Add custom data files here, if desired
+#        volumes:
+#            - ./data:/root/node/data
+        entrypoint: ["/bin/sh", "-c"]
+        command:
+            - "./algod -d data -l localhost:4001"
         ports:
-            - "8080:8080"
             - "4001:4001"

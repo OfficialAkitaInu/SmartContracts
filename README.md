@@ -3,7 +3,7 @@
 This repo contains assets for creating Smart Contacts for Akita Inu ASA. 
 ## Getting Started
 
-It's exciting to see so many people get involved! Below there is a guide to 
+It's exciting to see so many people get involved! Below is a guide to 
 getting started that is intended to help accommodate anybody  who wants to 
 contribute.  
 
@@ -11,31 +11,13 @@ For a detailed description on how to contribute to a Git project, read through
 this guide from data school:
 https://www.dataschool.io/how-to-contribute-on-github/
 
-Additionaly, developers woorking in this repo should follow the practice of a forking workflow.
+Additionally, developers working in this repo should follow the practice of a forking workflow.
 The link below describes that workflow in detail, and you can easily google additional information 
 or ask others on the team more info.
 https://docs.gitlab.com/ee/user/project/repository/forking_workflow.html
 
 We follow PEP8 standards which can be found below.
 https://www.python.org/dev/peps/pep-0008/
-
-##### Note
-This section will be updated soon with instruction on how to stand up and use Docker
-instead of using a local or virtual environment. To that end, you'll find a docker folder
-and other assets in this repo, but they are *not* currently functioning and shouldn't be used.
-
-###### IGNORE
-To get started you'll need docker installed
-
-The docker-compose is a work in progress...
-but the DockerFile works
-This project is written using pyteal, the python library used to write smart contracts for the Algorand blockchain
-
-To build run `make build`
-To run container in interactive mode run `make run`
-
-[Docker Compose Setup](docs/start_docker_readme.md)
-###### IGNORE
 
 
 ### 1. Clone the repo
@@ -58,8 +40,8 @@ pip install -r requirements.txt
 ```
 
 ### 3. Create a fund a test wallet
-It's recommended that you create and fund a wallet that you use soley for development.
-If in the case you accidently upload your key, you'll upload the test wallet's key and 
+It's recommended that you create and fund a wallet that you use only for development.
+If in the case you accidentally upload your key, you'll upload the test wallet's key and 
 not your personal wallet's key.
 
 To do so, you'll need to download the Algorand wallet app to your mobile device. From the app
@@ -88,17 +70,22 @@ You'll need docker to run these scripts and develop on Algorand's TestNet. To th
 end, follow [Docker's instructions](https://docs.docker.com/compose/install/) to
 download and install Docker Compose if you haven't already.
 
+Next, run `docker-compose up -d`. This should start all containers.
+
+Connect to your SmartContracts container with:
+`docker ps` and get the Container ID for the smart contracts container, then
+`docker exec -it <container_id> /bin/bash`
 
 ### 6. Clone and start Algorand Sandbox
 
 Clone [Algorand's Sandbox environment](https://github.com/algorand/sandbox) and spin up a sandbox
-TestNet isntance using the following command in your terminal:
+TestNet instance using the following command in your terminal:
 
 ```bash
 sandbox/sandbox up testnet
 ```
 
-This will take a couple minuntes, and once it's done you'll be returned back to your
+This will take a couple of minutes, and once it's done you'll be returned back to your
 current working directory in your terminal.
 
 To ensure that this worked, you can list the running containers by running this in 
@@ -127,7 +114,7 @@ python -m pytest test/
 If everything checks out, then you should receive a response that looks something
 like this:
 ```bash
- python -m pytest test/
+python -m pytest test/
 ===================== test session starts =====================
 platform darwin -- Python 3.8.2, pytest-6.2.5, py-1.11.0, pluggy-1.0.0
 rootdir: /SmartContracts
