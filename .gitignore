@@ -7,4 +7,5 @@ __pycache__
 /__pycache__/*
 /test/testConfig.json
 /DeveloperConfig.json
-
+deploy/dev/node_interface_shared_volume/algod.token
+deploy/prod/node_interface_shared_volume/algod.token

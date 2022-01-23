@@ -17,6 +17,7 @@ services:
             context: ./deploy/dev/
             dockerfile: node_testnet.DockerFile
         volumes:
+            - ./deploy/dev/node_interface_shared_volume:/shared_volume/
             - ./deploy/dev/config/config.json:/root/node/data/config.json
         stdin_open: true
         tty: true

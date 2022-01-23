@@ -39,6 +39,8 @@ Then, install the python requirements using the following command in your termin
 pip install -r requirements.txt
 ```
 
+However, to run the tests (and efficiently develop) we have created a docker-compose environment with this code and Algorand's TestNet. You can run your favorite IDE and the changes to files will be made live inside the `smartcontracts` container.
+
 ### 3. Create a fund a test wallet
 It's recommended that you create and fund a wallet that you use only for development.
 If in the case you accidentally upload your key, you'll upload the test wallet's key and 
@@ -66,46 +68,25 @@ to the `fund_account_mnemonic` key in `testConfig.json`.
 }
 ```
 ### 5. Install Docker
-You'll need docker to run these scripts and develop on Algorand's TestNet. To that
-end, follow [Docker's instructions](https://docs.docker.com/compose/install/) to
+As mentioned earlier, you'll need docker to run these scripts and develop on Algorand's TestNet. To that end, follow [Docker's instructions](https://docs.docker.com/compose/install/) to
 download and install Docker Compose if you haven't already.
 
 Next, run `docker-compose up -d`. This should start all containers.
 
 Connect to your SmartContracts container with:
-`docker ps` and get the Container ID for the smart contracts container, then
-`docker exec -it <container_id> /bin/bash`
+`docker exec -it smartcontracts bash`
 
-### 6. Clone and start Algorand Sandbox
+### 6. Working with the Algorand TestNet Container
 
-Clone [Algorand's Sandbox environment](https://github.com/algorand/sandbox) and spin up a sandbox
-TestNet instance using the following command in your terminal:
+Docker-compose also will spin up an image of [Algorand's Sandbox environment](https://github.com/algorand/sandbox), which is a TestNet instance accessible from the `smartcontracts` container. You can similarly connect to this directly with:
+`docker exec -it testnet bash`
+or view its logs
+`docker logs testnet`
 
-```bash
-sandbox/sandbox up testnet
-```
-
-This will take a couple of minutes, and once it's done you'll be returned back to your
-current working directory in your terminal.
-
-To ensure that this worked, you can list the running containers by running this in 
-your terminal:
-```bash
-docker ps
-```
-
-If everything started properly you should see something list this:
-
-```bash
-CONTAINER ID   IMAGE                     COMMAND                  CREATED        STATUS        PORTS                                                      NAMES
-d1e7878f5d0b   sandbox_indexer           "/tmp/start.sh"          2 hours ago   Up 2 hours   0.0.0.0:8980->8980/tcp                                     algorand-sandbox-indexer
-b44b170089d0   postgres:13-alpine        "docker-entrypoint.s…"   2 hours ago   Up 2 hours   0.0.0.0:5433->5432/tcp                                     algorand-sandbox-postgres
-b91982aff959   sandbox_algod             "/opt/start_algod.sh"    2 hours ago   Up 2 hours   0.0.0.0:4001-4002->4001-4002/tcp, 0.0.0.0:9392->9392/tcp   algorand-sandbox-algod
-```
 
 ### 5. Run tests and confirm everything's working
 Finally, you should run some tests on your machine to ensure everything has been
-set up properly. To do this, open up a terminal and run the following command:
+set up properly. To do this, inside the `smartcontracts` container, run the following command:
 
 ```bash
 python -m pytest test/
