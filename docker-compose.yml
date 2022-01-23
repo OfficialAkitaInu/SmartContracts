@@ -1,22 +1,24 @@
-version: '3.7'
+version: '3.8'
 services:
-    akita-smart-contracts:
+    akita_smart_contracts:
+        container_name: smartcontracts
         build:
             context: .
         volumes:
-            # Configs should not be baked into container, update this stanza as appropriate
-            - ./DeveloperConfigExample.json:/SmartContracts/DeveloperConfigExample.json
-            - ./test/testConfig.json:/SmartContracts/test/testConfig.json
+            # Configs should not be baked into container, they are in .dockerignore,
+            # however, they are available as a volume mount here for local development
+            - ./:/SmartContracts
         stdin_open: true
         tty: true
-    algo-testnet:
-        image: algorand/testnet:latest
-        working_dir: /root/node
-#       Add custom data files here, if desired
-#        volumes:
-#            - ./data:/root/node/data
-        entrypoint: ["/bin/sh", "-c"]
-        command:
-            - "./algod -d data -l localhost:4001"
-        ports:
-            - "4001:4001"
+
+    algo_node_testnet:
+        container_name: testnet
+        build:
+            context: ./deploy/dev/
+            dockerfile: node_testnet.DockerFile
+        volumes:
+            - ./deploy/dev/config/config.json:/root/node/data/config.json
+        stdin_open: true
+        tty: true
+        expose:
+            - "8080"
