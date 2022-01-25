@@ -1,5 +1,5 @@
 {
-  "algodAddress": "http://localhost:8080",
+  "algodAddress": "http://testnet:8080",
   "algodToken": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "indexerAddress": "http://localhost:8980",
   "indexerToken": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
