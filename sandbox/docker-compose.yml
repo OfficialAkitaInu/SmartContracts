@@ -8,7 +8,7 @@ services:
     volumes:
         # Configs should not be baked into container, they are in .dockerignore,
         # however, they are available as a volume mount here for local development
-        - ./:/SmartContracts
+        - ../:/SmartContracts
     stdin_open: true
     tty: true
   algod:
