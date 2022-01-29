@@ -43,10 +43,22 @@ You can follow detailed instructions to do so here:
 
 https://www.algorandwallet.com/support/develop-help-articles/connecting-to-testnet
 
-### 3. Input your test wallet's key into `testConfig.json`
+### 3. Add your test wallet's key into docker secrets
 When you create your wallet, be sure to copy your mnemonic key to a safe place,
-and label it as your test wallet's key. Take that key and enter it as the value 
-to the `fund_account_mnemonic` key in `testConfig.json`. You can leave the other configs the same for development purposes.
+and label it as your test wallet's key. 
+
+We treat fund_account_mnemonic as a secret, and don't want it to be committed to source control, even though it's a test account. We have a separate environment file for this purpose. Create a file named `.secret` under the `test/` directory with the plain text mneomic string. For example:
+
+`test/.secrets`:
+```bash
+fund_account_mnemonic="dog akita wow pup cute super diamond woof bark leash walk chow bone pet slobber dig"
+
+```
+(of course, replace this with your generated test mnemonic)
+
+This file is added to .gitignore so it should not be committed to the project; you don't have to do anything special to ensure it doesn't get committed unless you are creating the file in the wrong directory / wrong name.
+
+You can leave the other configs the same for development purposes.
 
 ```json
 {
@@ -54,7 +66,6 @@ to the `fund_account_mnemonic` key in `testConfig.json`. You can leave the other
   "algodToken": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "indexerAddress": "http://algorand-sandbox-indexer:8980",
   "indexerToken": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  "fund_account_mnemonic": "key1 key2 key3 key4 key5 key6 key7 key8 key9 key10 key11 key12 key13 key14 key15 key16 key17 key18 key19 key20 key21 key22 key23 key24 key25"
 }
 ```
 

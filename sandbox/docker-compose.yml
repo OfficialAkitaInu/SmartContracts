@@ -9,6 +9,8 @@ services:
         # Configs should not be baked into container, they are in .dockerignore,
         # however, they are available as a volume mount here for local development
         - ../:/SmartContracts
+    env_file:
+      - ../test/.secrets
     stdin_open: true
     tty: true
   algod:
@@ -66,3 +68,4 @@ services:
       POSTGRES_USER: algorand
       POSTGRES_PASSWORD: algorand
       POSTGRES_DB: indexer_db
+

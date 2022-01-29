@@ -1,6 +1,7 @@
-
 import base64
+import os
 import time
+
 from algosdk.testing.dryrun import DryrunRequest
 import pytest
 from algosdk.v2client import algod
@@ -37,7 +38,7 @@ def wallet_1(test_config):
     wallet_1 = {'mnemonic': wallet_mnemonic, 'public_key': public_key, 'private_key': private_key}
 
     # fund the wallet
-    fund_account(wallet_1['public_key'], test_config['fund_account_mnemonic'])
+    fund_account(wallet_1['public_key'], os.environ['fund_account_mnemonic'])
     return wallet_1
 
 
