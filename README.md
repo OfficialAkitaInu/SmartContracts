@@ -95,7 +95,7 @@ You can see any containers that failed to start with `docker ps -a`. You can get
 
 
 ### 6. Wait for node sync, then run tests and confirm everything's working
-It will take a few minutes for your testnet algod node to catch up. You will need it to finish syncing before you can run the tests, or else you'll see an error like: `pending tx not found in timeout rounds`.
+It will take a few minutes for your testnet algod node to catch up. You will need it to finish syncing before you can run the tests.
 
 Finally, you should run some tests on your machine to ensure everything has been
 set up properly. To do this, first connect to the `smartcontracts` container:
@@ -121,3 +121,11 @@ test/timed_asset_lock_contract_test.py ......                                   
 
 ===================== 6 passed in 141.36s (0:02:21) =====================
 ```
+
+## Common Errors
+
+### 1. An Exception running the tests with `pending tx not found in timeout rounds`
+Wait a bit longer for your algod node to sync
+
+### 2. An Exception running the tests with `overspend`
+You may need more algo to your test wallet with dispenser. Or you should wait a bit longer for the node to sync.
