@@ -37,7 +37,8 @@ If in the case you accidentally upload your key, you'll upload the test wallet's
 not your personal wallet's key.
 
 To do so, you'll need to download the Algorand wallet app to your mobile device. From the app
-you should then switch to test net, create a wallet, and fund that wallet.
+you should then switch to test net, create a wallet, and fund that wallet (with the dispenser tool).
+
 You can follow detailed instructions to do so here:
 
 
@@ -47,7 +48,7 @@ https://www.algorandwallet.com/support/develop-help-articles/connecting-to-testn
 When you create your wallet, be sure to copy your mnemonic key to a safe place,
 and label it as your test wallet's key. 
 
-We treat fund_account_mnemonic as a secret, and don't want it to be committed to source control, even though it's a test account. We have a separate environment file for this purpose. Create a file named `.secret` under the `test/` directory with the plain text mneomic string. For example:
+We treat fund_account_mnemonic as a secret, and don't want it to be committed to source control, even though it's a test account. We have a separate environment variable file for this purpose. Create a file named `.secret` under the `test/` directory with the plain text mneomic string. For example:
 
 `test/.secrets`:
 ```bash
@@ -72,11 +73,11 @@ You can leave the other configs the same for development purposes.
 ### 4. Install Docker
 You'll need [Docker](https://docs.docker.com/get-docker/) to run this development environment and develop on Algorand's TestNet. Detailed instructions for the setup are on the source project: [algorand/sandbox](https://github.com/algorand/sandbox). 
 
-### 5. Start the stack with the instructions in the `algorand/sandbox environment`
+### 5. Start the stack with the instructions in the `algorand/sandbox environment` with the `testnet` configuration.
 To get started:
 ```
 cd sandbox
-./sandbox up -v
+./sandbox up testnet -v
 ```
 
 This should be successful. You can verify with checking to make sure the docker containers are running with output something like this:
@@ -93,7 +94,9 @@ CONTAINER ID   IMAGE                           COMMAND                  CREATED 
 You can see any containers that failed to start with `docker ps -a`. You can get logs from those containers with `docker logs <CONTAINER ID>`, e.g. if in the above example the indexer failed to start `docker logs 7ab2df254ad3`
 
 
-### 6. Run tests and confirm everything's working
+### 6. Wait for node sync, then run tests and confirm everything's working
+It will take a few minutes for your testnet algod node to catch up. You will need it to finish syncing before you can run the tests, or else you'll see an error like: `pending tx not found in timeout rounds`.
+
 Finally, you should run some tests on your machine to ensure everything has been
 set up properly. To do this, first connect to the `smartcontracts` container:
 ```
