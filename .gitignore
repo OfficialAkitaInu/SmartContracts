@@ -5,6 +5,4 @@ venv/*
 /contracts/TimedAssetLockContract/__pycache__/*
 __pycache__
 /__pycache__/*
-/test/testConfig.json
-/DeveloperConfig.json
-
+test/.secrets

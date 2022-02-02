@@ -1,1 +1,0 @@
-﻿# The tests need a build folder, this README purpose is for the git to track this folder.
