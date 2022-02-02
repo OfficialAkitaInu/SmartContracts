@@ -38,9 +38,12 @@ not your personal wallet's key.
 
 To do so, you'll need to download the Algorand wallet app to your mobile device. From the app
 you should then switch to test net, create a wallet, and fund that wallet (with the dispenser tool).
+https://bank.testnet.algorand.network/
 
+```
+Note, you can also use my algo and switch it to testnet mode
+```
 You can follow detailed instructions to do so here:
-
 
 https://www.algorandwallet.com/support/develop-help-articles/connecting-to-testnet
 
@@ -48,11 +51,11 @@ https://www.algorandwallet.com/support/develop-help-articles/connecting-to-testn
 When you create your wallet, be sure to copy your mnemonic key to a safe place,
 and label it as your test wallet's key. 
 
-We treat fund_account_mnemonic as a secret, and don't want it to be committed to source control, even though it's a test account. We have a separate environment variable file for this purpose. Create a file named `.secret` under the `test/` directory with the plain text mneomic string. For example:
+We treat fund_account_mnemonic as a secret, and don't want it to be committed to source control, even though it's a test account. We have a separate environment variable file for this purpose. Create a file named `.secrets` under the `test/` directory with the plain text mneomic string. For example:
 
 `test/.secrets`:
 ```bash
-fund_account_mnemonic="dog akita wow pup cute super diamond woof bark leash walk chow bone pet slobber dig"
+fund_account_mnemonic=dog akita wow pup cute super diamond woof bark leash walk chow bone pet slobber dig
 
 ```
 (of course, replace this with your generated test mnemonic)
