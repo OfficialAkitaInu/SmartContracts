@@ -57,7 +57,7 @@ Then, install the python requirements using the following command in your termin
 pip install -r requirements.txt
 ```
 
-### 3. Create a fund a test wallet
+### 3. Create and fund a test wallet
 It's recommended that you create and fund a wallet that you use soley for development.
 If in the case you accidently upload your key, you'll upload the test wallet's key and 
 not your personal wallet's key.
