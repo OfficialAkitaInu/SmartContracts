@@ -2,8 +2,6 @@ from algosdk.v2client import algod, indexer
 from algosdk.future import transaction
 from algosdk import encoding, account, mnemonic
 
-
-from joblib import dump, load
 import json
 import os
 import base64
@@ -39,7 +37,7 @@ def get_algo_balance(client, public_key):
     return client.account_info(public_key)['amount']
 
 def get_min_algo_balance(number_assets):
-    return BALANCE_PER_ASSET + BALANCE_PER_ASSET * number_assets
+    return BALANCE_PER_ASSET + (BALANCE_PER_ASSET * number_assets)
 
 def generate_new_account():
     private_key, address = account.generate_account()
@@ -66,7 +64,9 @@ def compile_program(client, source_code, file_path=None):
         return base64.b64decode(compile_response['result'])
     else:
         check_build_dir()
-        dump(base64.b64decode(compile_response['result']), 'build/' + file_path)
+        fp = open('build/' + file_path, "wb")
+        fp.write(base64.b64decode(compile_response['result']))
+        fp.close()
 
 
 # read user local state
@@ -75,31 +75,39 @@ def read_local_state(client, addr, app_id):
     output = {}
     for app in results['apps-local-state']:
         if app['id'] == app_id:
-            if 'key-value' in app:
-                for key_value in app['key-value']:
-                    if key_value['value']['type'] == 1:
-                        value = key_value['value']['bytes']
-                    else:
-                        value = key_value['value']['uint']
-                    output[base64.b64decode(key_value['key']).decode()] = value
-                return output
-
-
-# read app global state
-def read_global_state(client, addr, app_id):
-    results = client.account_info(addr)
-    output = {}
-    apps_created = results['created-apps']
-    for app in apps_created:
-        if app['id'] == app_id :
-            for key_value in app['params']['global-state']:
+            for key_value in app['key-value']:
                 if key_value['value']['type'] == 1:
-                    value = base64.b64decode(key_value['value']['bytes'])
+                    value = key_value['value']['bytes']
                 else:
                     value = key_value['value']['uint']
                 output[base64.b64decode(key_value['key']).decode()] = value
             return output
 
+def get_translated_local_state(client, app_id, public_key):
+    local_state = read_local_state(client, public_key, app_id)
+    for key in local_state.keys():
+        if type(local_state[key]) != int:
+            local_state[key] = int.from_bytes(base64.b64decode(local_state[key]), "big")
+    return local_state
+
+
+# read app global state
+def read_global_state(client, app_id):
+    output = {}
+    for key_value in client.application_info(app_id)['params']['global-state']:
+        if key_value['value']['type'] == 1:
+            value = base64.b64decode(key_value['value']['bytes'])
+        else:
+            value = key_value['value']['uint']
+        output[base64.b64decode(key_value['key']).decode()] = value
+    return output
+
+def get_translated_global_state(client, app_id):
+    global_state = read_global_state(client, app_id)
+    for key in global_state.keys():
+        if type(global_state[key]) != int:
+            global_state[key] = int.from_bytes(global_state[key], "big")
+    return global_state
 
 def pretty_print_state(state):
     for keyvalue in state:
@@ -118,16 +126,21 @@ def get_key_from_state(state, key):
                 return state[i]['value']['uint']
 
 
-def dump_teal_assembly(file_path, program_fn_pointer):
+def dump_teal_assembly(file_path, program_fn_pointer, args=None):
     check_build_dir()
     with open('build/' + file_path, 'w') as f:
-        compiled = program_fn_pointer()
+        if args != None:
+            compiled = program_fn_pointer(*args)
+        else:
+            compiled = program_fn_pointer()
         f.write(compiled)
 
 
 def load_compiled(file_path):
     try:
-        compiled = load('build/' + file_path)
+        fp = open('build/' + file_path, "rb")
+        compiled = fp.read()
+        fp.close()
     except:
         print("Error reading source file...exiting")
         exit(-1)
@@ -210,6 +223,8 @@ def send_transactions(client, transactions):
     wait_for_txn_confirmation(client, transaction_id, 5)
     return transaction_id
 
+def get_remote_indexer(token="", address="https://algoindexer.algoexplorerapi.io/", headers={'User-Agent':'Random'}):
+    return indexer.IndexerClient(token, address, headers)
 
 def create_app_signed_txn(private_key,
                           public_key,
@@ -220,7 +235,7 @@ def create_app_signed_txn(private_key,
                           global_schema,
                           local_schema,
                           app_args,
-                          pages=0):
+                          pages):
     """
         Creates an signed "create app" transaction to an application
             Args:
