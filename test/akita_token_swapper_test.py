@@ -10,6 +10,7 @@ from algosdk.future import transaction
 from algosdk.encoding import encode_address, is_valid_address
 from algosdk.error import AlgodHTTPError, TemplateInputError
 from akita_inu_asa_utils import read_local_state, read_global_state, wait_for_txn_confirmation, get_application_address
+from .testing_utils import clear_build_folder
 
 TESTASSETNAME = "TEST"
 TESTUNITNAME = "TESTU"
@@ -92,12 +93,6 @@ def app_id(test_config, wallet_1, swap_asset):
     creator_mnemonic = wallet_1['mnemonic']
     app_id = deploy(algod_address, algod_token, creator_mnemonic)
     return app_id
-
-
-def clear_build_folder():
-    import os
-    for file in os.scandir('./build'):
-        os.remove(file.path)
 
 def opt_in_assets_txn(app_id, client, wallet_1, swap_asset, new_asset):
     public_key = wallet_1['public_key']
