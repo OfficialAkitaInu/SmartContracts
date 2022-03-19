@@ -8,6 +8,7 @@ from algosdk import account, mnemonic, constants
 from algosdk.encoding import encode_address, is_valid_address
 from algosdk.error import AlgodHTTPError, TemplateInputError
 from akita_inu_asa_utils import read_local_state, read_global_state, wait_for_txn_confirmation
+from .testing_utils import clear_build_folder
 
 
 NUM_TEST_ASSET = int(1e6)
@@ -89,12 +90,6 @@ def app_id(test_config, asset_id, end_time, wallet_1):
     creator_mnemonic = wallet_1['mnemonic']
     app_id = deploy(algod_address, algod_token, creator_mnemonic, asset_id, end_time)
     return app_id
-
-
-def clear_build_folder():
-    import os
-    for file in os.scandir('./build'):
-        os.remove(file.path)
 
 
 def assert_state(local_state, global_state, asset_id, receiver_address, unlock_time):
@@ -312,7 +307,7 @@ class TestTimedAssetLockContract:
         opt_out(wallet_1, app_id, [asset_id], client)
         with pytest.raises(AlgodHTTPError):
             cash_out(client, public_key, private_key, app_id, [asset_id])
-        
+
         # opt back in so you can fully cash out
         opt_in(public_key,private_key, client.suggested_params(), get_application_address(app_id), app_id, asset_id, client)
 
