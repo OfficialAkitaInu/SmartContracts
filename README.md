@@ -134,14 +134,15 @@ Wait a bit longer for your algod node to sync
 You may need more algo to your test wallet with dispenser. Or you should wait a bit longer for the node to sync.
 
 ### 3. Fast-catchup staying at 0%
-If you've run a `./sandbox up` command with an environment config other than `tesnet`,
-you'll need to restart the sandbox with a clean environment by running:
+If you've run a `./sandbox up` command with an environment config other than
+`testnet`, or if you want to change your sandbox configuration, you'll need to
+shutdown and clean the sandbox environment by running:
 ```
 ./sandbox down
 ./sandbox clean
 ```
 
-After that you can start your sandbox environment again with:
+After that you can start your sandbox again with:
 ```
 ./sandbox up testnet -v
 ```
