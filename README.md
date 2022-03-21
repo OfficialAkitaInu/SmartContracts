@@ -31,9 +31,16 @@ If you want this in a particular folder on your computer, make sure you navigate
 that folder using the `cd` command before cloning the repo.
 
 
-### 2. Create a fund a test wallet
-It's recommended that you create and fund a wallet that you use only for development.
-If in the case you accidentally upload your key, you'll upload the test wallet's key and
+Ensure you have Python 3.8 installed on your machine, and prefereable within a virtual environment
+([here's some detail on how to setup a virtual environment]([https://mothergeo-py.readthedocs.io/en/latest/development/how-to/venv-win.html)).
+Then, install the python requirements using the following command in your terminal:
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Create and fund a test wallet
+It's recommended that you create and fund a wallet that you use soley for development.
+If in the case you accidently upload your key, you'll upload the test wallet's key and 
 not your personal wallet's key.
 
 To do so, you'll need to download the Algorand wallet app to your mobile device. From the app
