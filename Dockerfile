@@ -1,4 +1,4 @@
-FROM algorand/testnet:latest
+FROM ubuntu:jammy
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -8,26 +8,12 @@ RUN apt-get update && \
     less \
     tmux
 
-RUN mkdir -p /AkitaInuASASmartContracts
+RUN ln -sf /usr/bin/python3 /usr/bin/python
 
-WORKDIR /AkitaInuASASmartContracts
+RUN mkdir -p /SmartContracts
 
-COPY utilities /AkitaInuASASmartContracts
+WORKDIR /SmartContracts
 
-COPY requirements.txt /AkitaInuASASmartContracts
+COPY . /SmartContracts
 
-RUN pip3 install -r /AkitaInuASASmartContracts/requirements.txt
-
-RUN mkdir -p $HOME/node/data
-
-RUN chown -R root: $HOME/node/data
-
-RUN echo 'export ALGORAND_DATA="$HOME/node/data"' >> $HOME/.bashrc
-
-RUN echo 'export PATH="$HOME/node:$PATH"' >> $HOME/.bashrc
-
-WORKDIR /root/node
-
-COPY assets/setup.sh .
-
-RUN chmod 755 setup.sh
+RUN pip3 install -r /SmartContracts/requirements.txt

@@ -1,0 +1,224 @@
+#pragma version 5
+txn Fee
+int 4000
+>
+txn RekeyTo
+global ZeroAddress
+!=
+||
+txn OnCompletion
+int CloseOut
+==
+||
+txn OnCompletion
+int UpdateApplication
+==
+||
+txn OnCompletion
+int ClearState
+==
+||
+bnz main_l16
+txn ApplicationID
+int 0
+==
+bnz main_l15
+txn OnCompletion
+int OptIn
+==
+bnz main_l14
+txn OnCompletion
+int NoOp
+==
+txn NumAppArgs
+int 1
+==
+&&
+txna ApplicationArgs 0
+byte "opt_in_asset"
+==
+&&
+bnz main_l13
+txn OnCompletion
+int NoOp
+==
+txn NumAppArgs
+int 1
+==
+&&
+txna ApplicationArgs 0
+byte "get_drip"
+==
+&&
+bnz main_l12
+txn OnCompletion
+int NoOp
+==
+txn NumAppArgs
+int 1
+==
+&&
+txna ApplicationArgs 0
+byte "fund_faucet"
+==
+&&
+bnz main_l11
+txn OnCompletion
+int DeleteApplication
+==
+bnz main_l10
+int 1
+bnz main_l9
+err
+main_l9:
+int 0
+return
+main_l10:
+txn Sender
+global CreatorAddress
+==
+assert
+int 1
+return
+main_l11:
+global GroupSize
+int 2
+==
+gtxn 0 TypeEnum
+int axfer
+==
+&&
+gtxn 0 AssetReceiver
+global CurrentApplicationAddress
+==
+&&
+gtxn 0 XferAsset
+byte "asset_id_key"
+app_global_get
+==
+&&
+gtxn 0 AssetAmount
+int 0
+>
+&&
+assert
+int 1
+return
+main_l12:
+txn Sender
+byte "asset_id_key"
+app_global_get
+asset_holding_get AssetBalance
+store 0
+store 1
+global CurrentApplicationAddress
+byte "asset_id_key"
+app_global_get
+asset_holding_get AssetBalance
+store 2
+store 3
+load 1
+byte "min_asset_amount"
+app_global_get
+>=
+txn Sender
+balance
+byte "min_algo_amount"
+app_global_get
+>=
+&&
+assert
+global GroupSize
+int 2
+==
+gtxn 0 Amount
+int 1000
+==
+&&
+assert
+global LatestTimestamp
+int 0
+byte "user_last_claim_time"
+app_local_get
+-
+byte "drip_time"
+app_global_get
+>=
+assert
+load 3
+assert
+itxn_begin
+txn Sender
+itxn_field AssetReceiver
+int axfer
+itxn_field TypeEnum
+byte "asset_id_key"
+app_global_get
+itxn_field XferAsset
+byte "drip_amount"
+app_global_get
+itxn_field AssetAmount
+itxn_submit
+int 0
+byte "user_last_claim_time"
+global LatestTimestamp
+app_local_put
+int 1
+return
+main_l13:
+global GroupSize
+int 2
+==
+gtxn 0 TypeEnum
+int pay
+==
+&&
+gtxn 0 Amount
+int 201000
+==
+&&
+assert
+itxn_begin
+int axfer
+itxn_field TypeEnum
+byte "asset_id_key"
+app_global_get
+itxn_field XferAsset
+global CurrentApplicationAddress
+itxn_field AssetReceiver
+itxn_submit
+int 1
+return
+main_l14:
+int 0
+byte "user_last_claim_time"
+global LatestTimestamp
+app_local_put
+int 1
+return
+main_l15:
+byte "asset_id_key"
+txna ApplicationArgs 0
+btoi
+app_global_put
+byte "drip_time"
+txna ApplicationArgs 1
+btoi
+app_global_put
+byte "min_algo_amount"
+txna ApplicationArgs 2
+btoi
+app_global_put
+byte "min_asset_amount"
+txna ApplicationArgs 3
+btoi
+app_global_put
+byte "drip_amount"
+txna ApplicationArgs 4
+btoi
+app_global_put
+int 1
+return
+main_l16:
+int 0
+return

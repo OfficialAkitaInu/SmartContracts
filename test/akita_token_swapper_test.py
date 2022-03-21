@@ -1,5 +1,6 @@
 import base64
 import math
+import os
 import time
 
 import pytest
@@ -9,6 +10,7 @@ from algosdk.future import transaction
 from algosdk.encoding import encode_address, is_valid_address
 from algosdk.error import AlgodHTTPError, TemplateInputError
 from akita_inu_asa_utils import read_local_state, read_global_state, wait_for_txn_confirmation, get_application_address
+from .testing_utils import clear_build_folder
 
 TESTASSETNAME = "TEST"
 TESTUNITNAME = "TESTU"
@@ -42,7 +44,7 @@ def wallet_1(test_config):
     wallet_1 = {'mnemonic': wallet_mnemonic, 'public_key': public_key, 'private_key': private_key}
 
     # fund the wallet
-    fund_account(wallet_1['public_key'], test_config['fund_account_mnemonic'], 4000000)
+    fund_account(wallet_1['public_key'], os.environ['fund_account_mnemonic'], 4000000)
     return wallet_1
 
 @pytest.fixture(scope='class')
@@ -69,7 +71,7 @@ def wallet_2(test_config, swap_asset, wallet_1, client):
     from .testing_utils import fund_account
     wallet_mnemonic, private_key, public_key = generate_new_account()
     wallet_2 = {'mnemonic': wallet_mnemonic, 'public_key': public_key, 'private_key': private_key}
-    fund_account(wallet_2['public_key'], test_config['fund_account_mnemonic'])
+    fund_account(wallet_2['public_key'], os.environ['fund_account_mnemonic'])
 
     params = client.suggested_params()
     txn, txn_id = opt_in_asset_signed_txn(private_key, public_key, params, swap_asset)
@@ -91,12 +93,6 @@ def app_id(test_config, wallet_1, swap_asset):
     creator_mnemonic = wallet_1['mnemonic']
     app_id = deploy(algod_address, algod_token, creator_mnemonic)
     return app_id
-
-
-def clear_build_folder():
-    import os
-    for file in os.scandir('./build'):
-        os.remove(file.path)
 
 def opt_in_assets_txn(app_id, client, wallet_1, swap_asset, new_asset):
     public_key = wallet_1['public_key']

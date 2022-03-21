@@ -12,6 +12,12 @@ def load_test_config(file_path='./test/testConfig.json'):
     fp = open(file_path)
     return json.load(fp)
 
+def clear_build_folder():
+    import os
+    for file in os.scandir('./build'):
+        if not file.path.endswith('.gitkeep'):
+            os.remove(file.path)
+
 
 def fund_account(address, sender_mnemonic, initial_funds=2000000):
     test_config = load_test_config('./test/testConfig.json')
