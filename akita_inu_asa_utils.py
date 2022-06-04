@@ -108,16 +108,6 @@ def pretty_print_state(state):
     print("\n\n\n")
 
 
-def get_key_from_state(state, key):
-    for i in range(0, len(state)):
-        found_key = base64.b64decode(state[i]['key'])
-        if found_key == key:
-            if state[i]['value']['type'] == 1:
-                return base64.b64decode(state[i]['value']['bytes'])
-            elif state[i]['value']['type'] == 2:
-                return state[i]['value']['uint']
-
-
 def dump_teal_assembly(file_path, program_fn_pointer):
     check_build_dir()
     with open('build/' + file_path, 'w') as f:
