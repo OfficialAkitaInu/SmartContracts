@@ -7,7 +7,7 @@ from algosdk.future import transaction
 from algosdk import account, mnemonic, constants
 from algosdk.encoding import encode_address, is_valid_address
 from algosdk.error import AlgodHTTPError, TemplateInputError
-from akita_inu_asa_utils import read_local_state, read_global_state, wait_for_txn_confirmation, get_key_from_state
+from akita_inu_asa_utils import read_local_state, read_global_state, wait_for_txn_confirmation
 from .testing_utils import clear_build_folder
 
 NUM_TEST_ASSET = int(1e6)
@@ -90,10 +90,10 @@ class TestASAFaucet:
         public_key = wallet_1['public_key']
 
         global_state = read_global_state(client, public_key, app_id)
-        assert get_key_from_state(global_state, b'asset_id_key') == asset_id
-        assert get_key_from_state(global_state, b'drip_time') == DRIP_TIME_SEC
-        assert get_key_from_state(global_state, b'min_algo_amount') == MIN_ALGO_AMOUNT
-        assert get_key_from_state(global_state, b'min_asset_amount') == MIN_ASA_AMOUNT
+        assert global_state['asset_id_key'] == asset_id
+        assert global_state['drip_time'] == DRIP_TIME_SEC
+        assert global_state['min_algo_amount'] == MIN_ALGO_AMOUNT
+        assert global_state['min_asset_amount'] == MIN_ASA_AMOUNT
 
     def test_opt_in(self, app_id, client, asset_id, wallet_1):
         from akita_inu_asa_utils import opt_in_app_signed_txn, wait_for_txn_confirmation
@@ -105,7 +105,7 @@ class TestASAFaucet:
         wait_for_txn_confirmation(client, txn_id, 5)
 
         local_state = read_local_state(client, public_key, app_id)
-        assert time.time() - 60 <= get_key_from_state(local_state, b'user_last_claim_time') <= time.time()
+        assert time.time() - 60 <= local_state['user_last_claim_time'] <= time.time()
 
     def test_opt_in_asset(self, app_id, client, asset_id, wallet_1):
         from akita_inu_asa_utils import get_application_address
@@ -171,7 +171,7 @@ class TestASAFaucet:
 
         local_state = read_local_state(client, public_key, app_id)
         assert get_asset_balance(client, public_key, asset_id) == wallet_balance_pre + DRIP_AMOUNT
-        assert get_key_from_state(local_state, b'user_last_claim_time') <= (time.time() + 15)
+        assert local_state['user_last_claim_time'] <= (time.time() + 15)
 
     def test_claim_to_soon(self, app_id, client, asset_id, wallet_1):
         from akita_inu_asa_utils import get_application_address
